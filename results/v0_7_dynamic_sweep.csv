@@ -1,0 +1,15 @@
+case,latency_a,latency_b,target_latency,delay_a,delay_b,runtime_iterations,predicted_cycles,measured_cycles,contract_accepted,hardware_emitted,functional_correct,timing_match
+accepted,2,5,5,3,0,1,14,14,True,True,True,True
+accepted,2,5,5,3,0,2,21,21,True,True,True,True
+accepted,2,5,5,3,0,4,35,35,True,True,True,True
+accepted,2,5,5,3,0,7,56,56,True,True,True,True
+accepted,5,2,5,0,3,1,14,14,True,True,True,True
+accepted,5,2,5,0,3,2,21,21,True,True,True,True
+accepted,5,2,5,0,3,4,35,35,True,True,True,True
+accepted,5,2,5,0,3,7,56,56,True,True,True,True
+accepted,3,3,3,0,0,1,12,12,True,True,True,True
+accepted,3,3,3,0,0,2,17,17,True,True,True,True
+accepted,3,3,3,0,0,4,27,27,True,True,True,True
+accepted,3,3,3,0,0,7,42,42,True,True,True,True
+rejected,4,7,7,3,0,4,,,False,False,,
+rejected,8,3,8,0,5,4,,,False,False,,

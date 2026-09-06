@@ -1,0 +1,6 @@
+latency_a,latency_b,target_latency,delay_a,delay_b,predicted_cycles,measured_cycles,relations_correct,functional_correct,timing_match
+2,5,5,3,0,7,7,True,True,True
+5,2,5,0,3,7,7,True,True,True
+3,3,3,0,0,5,5,True,True,True
+4,7,7,3,0,9,9,True,True,True
+8,3,8,0,5,10,10,True,True,True

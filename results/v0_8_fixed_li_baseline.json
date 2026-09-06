@@ -1,0 +1,10 @@
+{
+  "baseline": "opaque_fixed_latency_li",
+  "actual_kernel_latencies": {
+    "L_A": 2,
+    "L_B": 5
+  },
+  "parent_receives_latency_metadata": false,
+  "interface": "go/done",
+  "calyx_static_annotations": false
+}

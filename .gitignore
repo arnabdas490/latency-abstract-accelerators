@@ -25,3 +25,6 @@ dist/
 
 # Local scratch
 scratch/
+
+# V0.8 generated black-box RTL is part of the reproducible baseline.
+!baselines/v0_8_fixed_li_kernels.sv

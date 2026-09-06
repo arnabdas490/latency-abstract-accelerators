@@ -1,0 +1,5 @@
+{
+  "name": "toy_increment",
+  "latency": 3,
+  "generator": "toy_generator"
+}

@@ -1,0 +1,18 @@
+{
+  "status": "accepted",
+  "hardware_emitted": true,
+  "shared_rtl": "baselines/v0_8_fixed_li_kernels.sv",
+  "bindings": {
+    "L_A": 2,
+    "L_B": 5,
+    "T": 5,
+    "D_A": 3,
+    "D_B": 0
+  },
+  "interval_metadata": {
+    "kernel_a": 2,
+    "kernel_b": 5
+  },
+  "parallel_region_latency": 5,
+  "parent_uses_static_timing": true
+}

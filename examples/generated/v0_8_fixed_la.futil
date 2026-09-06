@@ -1,0 +1,100 @@
+import "primitives/core.futil";
+import "primitives/memories/comb.futil";
+
+extern "../../baselines/v0_8_fixed_li_kernels.sv" {
+  primitive kernel_a_li(
+    @interval(2) @go go: 1,
+    x: 32,
+    @clk clk: 1,
+    @reset reset: 1
+  ) -> (
+    @stable out: 32,
+    @done done: 1
+  );
+
+  primitive kernel_b_li(
+    @interval(5) @go go: 1,
+    x: 32,
+    @clk clk: 1,
+    @reset reset: 1
+  ) -> (
+    @stable out: 32,
+    @done done: 1
+  );
+}
+
+component main() -> () {
+  cells {
+    @external(1) mem = comb_mem_d1(32, 4, 2);
+
+    x = std_reg(32);
+    counter = std_reg(32);
+
+    a = kernel_a_li();
+    b = kernel_b_li();
+
+    add_counter = std_add(32);
+    add_final = std_add(32);
+    lt = std_lt(32);
+  }
+
+  wires {
+    group load_x {
+      mem.addr0 = 2'd0;
+      x.in = mem.read_data;
+      x.write_en = 1'b1;
+      load_x[done] = x.done;
+    }
+
+    group init_counter {
+      counter.in = 32'd0;
+      counter.write_en = 1'b1;
+      init_counter[done] = counter.done;
+    }
+
+    comb group cond {
+      mem.addr0 = 2'd1;
+      lt.left = counter.out;
+      lt.right = mem.read_data;
+    }
+
+    static<1> group incr_counter {
+      add_counter.left = counter.out;
+      add_counter.right = 32'd1;
+
+      counter.in = add_counter.out;
+      counter.write_en = 1'b1;
+    }
+
+    group write_result {
+      add_final.left = a.out;
+      add_final.right = b.out;
+
+      mem.addr0 = 2'd2;
+      mem.write_data = add_final.out;
+      mem.write_en = 1'b1;
+
+      write_result[done] = mem.done;
+    }
+  }
+
+  control {
+    seq {
+      load_x;
+      init_counter;
+
+      while lt.out with cond {
+        static seq {
+          static par {
+            static invoke a(x=x.out)();
+            static invoke b(x=x.out)();
+          }
+
+          incr_counter;
+        }
+      }
+
+      write_result;
+    }
+  }
+}

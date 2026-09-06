@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build / temporary files
+build/
+dist/
+*.log
+
+# Calyx / fud2 temporary outputs
+.fud2-*/
+*.sv
+*.vcd
+*.fst
+*.exe
+
+# Editor files
+.vscode/
+.idea/
+
+# Local scratch
+scratch/

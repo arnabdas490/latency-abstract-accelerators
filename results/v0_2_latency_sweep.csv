@@ -1,0 +1,6 @@
+latency,predicted_cycles,measured_cycles,correct,prediction_match
+1,17,17,True,True
+2,22,22,True,True
+3,27,27,True,True
+4,32,32,True,True
+5,37,37,True,True

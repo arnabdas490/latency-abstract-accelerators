@@ -15,8 +15,13 @@ def main():
         raise ValueError("Latency must be at least 1 cycle.")
 
     if latency == 1:
+        delay_group = ""
         kernel_control = "incr;"
     else:
+        delay_group = """
+    static<1> group delay {
+    }
+"""
         kernel_control = f"""static seq {{
           static repeat {latency - 1} {{
             delay;
@@ -42,10 +47,7 @@ component main() -> () {{
       counter.write_en = 1'b1;
       init[done] = counter.done;
     }}
-
-    static<1> group delay {{
-    }}
-
+{delay_group}
     static<1> group incr {{
       add.left = counter.out;
       add.right = 32'd1;

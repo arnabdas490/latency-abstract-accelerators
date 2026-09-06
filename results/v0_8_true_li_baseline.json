@@ -1,0 +1,8 @@
+{
+  "baseline": "true_latency_insensitive",
+  "kernel_a_internal_latency": 2,
+  "kernel_b_internal_latency": 5,
+  "parent_knows_latency": false,
+  "parent_uses_symbolic_alignment": false,
+  "parent_control": "dynamic invoke + dynamic par"
+}

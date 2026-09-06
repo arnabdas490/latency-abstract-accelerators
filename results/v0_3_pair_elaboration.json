@@ -1,0 +1,13 @@
+{
+  "kernel_a": {
+    "name": "kernel_a",
+    "latency": 2,
+    "alignment_delay": 3
+  },
+  "kernel_b": {
+    "name": "kernel_b",
+    "latency": 5,
+    "alignment_delay": 0
+  },
+  "target_latency": 5
+}

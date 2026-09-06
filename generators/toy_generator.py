@@ -8,6 +8,7 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--latency", type=int, required=True)
+    parser.add_argument("--name", default="toy_increment")
     parser.add_argument(
         "--out",
         default="contracts/toy_kernel.json",
@@ -18,7 +19,7 @@ def main():
         raise ValueError("Latency must be at least 1 cycle.")
 
     contract = {
-        "name": "toy_increment",
+        "name": args.name,
         "latency": args.latency,
         "generator": "toy_generator",
     }
@@ -27,7 +28,10 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(contract, indent=2) + "\n")
 
-    print(f"Generated {out} with latency L={args.latency}")
+    print(
+        f"Generated {out}: "
+        f"name={args.name}, latency={args.latency}"
+    )
 
 
 if __name__ == "__main__":

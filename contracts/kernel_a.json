@@ -1,0 +1,5 @@
+{
+  "name": "kernel_a",
+  "latency": 2,
+  "generator": "toy_generator"
+}

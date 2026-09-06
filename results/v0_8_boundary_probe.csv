@@ -1,0 +1,6 @@
+runtime_iterations,dynamic_cycles,static_cycles,delta_cycles,dynamic_correct,static_correct
+0,7,7,0,True,True
+1,9,9,0,True,True
+2,11,11,0,True,True
+4,15,15,0,True,True
+7,21,21,0,True,True

@@ -1,0 +1,56 @@
+import "primitives/core.futil";
+import "primitives/memories/comb.futil";
+
+component main() -> () {
+  cells {
+    @external(1) mem = comb_mem_d1(32, 2, 1);
+
+    counter = std_reg(32);
+    add_counter = std_add(32);
+    lt = std_lt(32);
+  }
+
+  wires {
+    group init_counter {
+      counter.in = 32'd0;
+      counter.write_en = 1'b1;
+      init_counter[done] = counter.done;
+    }
+
+    comb group cond {
+      mem.addr0 = 1'd0;
+      lt.left = counter.out;
+      lt.right = mem.read_data;
+    }
+
+    static<1> group incr {
+      add_counter.left = counter.out;
+      add_counter.right = 32'd1;
+
+      counter.in = add_counter.out;
+      counter.write_en = 1'b1;
+    }
+
+    group write_counter {
+      mem.addr0 = 1'd1;
+      mem.write_data = counter.out;
+      mem.write_en = 1'b1;
+
+      write_counter[done] = mem.done;
+    }
+  }
+
+  control {
+    seq {
+      init_counter;
+
+      while lt.out with cond {
+        static seq {
+          incr;
+        }
+      }
+
+      write_counter;
+    }
+  }
+}

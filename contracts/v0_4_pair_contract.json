@@ -1,0 +1,47 @@
+{
+  "name": "aligned_parallel_pair",
+
+  "symbols": [
+    "L_A",
+    "L_B",
+    "T",
+    "D_A",
+    "D_B"
+  ],
+
+  "derived": {
+    "T": {
+      "op": "max",
+      "args": ["L_A", "L_B"]
+    },
+    "D_A": {
+      "op": "sub",
+      "args": ["T", "L_A"]
+    },
+    "D_B": {
+      "op": "sub",
+      "args": ["T", "L_B"]
+    }
+  },
+
+  "constraints": [
+    {
+      "name": "positive_latency_a",
+      "op": "ge",
+      "lhs": "L_A",
+      "rhs": 1
+    },
+    {
+      "name": "positive_latency_b",
+      "op": "ge",
+      "lhs": "L_B",
+      "rhs": 1
+    },
+    {
+      "name": "parallel_deadline",
+      "op": "le",
+      "lhs": "T",
+      "rhs": 6
+    }
+  ]
+}

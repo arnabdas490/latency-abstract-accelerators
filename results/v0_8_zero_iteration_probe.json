@@ -1,0 +1,14 @@
+{
+  "runtime_iterations": 0,
+  "true_li": {
+    "cycles": 7,
+    "memory": [10, 0, 0, 0],
+    "functional_correct": true
+  },
+  "manual_static": {
+    "cycles": 7,
+    "memory": [10, 0, 0, 0],
+    "functional_correct": true
+  },
+  "conclusion": "The observed LI/static cycle difference is entirely iteration-dependent for this experiment."
+}

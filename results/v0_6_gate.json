@@ -1,0 +1,12 @@
+{
+  "status": "accepted",
+  "hardware_emitted": true,
+  "output": "examples/generated/v0_6_dynamic_pair.futil",
+  "bindings": {
+    "L_A": 2,
+    "L_B": 5,
+    "T": 5,
+    "D_A": 3,
+    "D_B": 0
+  }
+}

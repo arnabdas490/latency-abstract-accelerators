@@ -1,0 +1,9 @@
+{
+  "baseline": "fully_dynamic",
+  "latency_a": 2,
+  "latency_b": 5,
+  "runtime_iterations": 4,
+  "cycles": 31,
+  "memory": [10, 4, 23, 0],
+  "functional_correct": true
+}

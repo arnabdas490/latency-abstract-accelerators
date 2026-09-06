@@ -1,0 +1,13 @@
+{
+  "baseline": "fully_dynamic",
+  "kernel_a": {
+    "name": "kernel_a",
+    "latency": 2
+  },
+  "kernel_b": {
+    "name": "kernel_b",
+    "latency": 5
+  },
+  "uses_symbolic_alignment": false,
+  "uses_static_control": false
+}

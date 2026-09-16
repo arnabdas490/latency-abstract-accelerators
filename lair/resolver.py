@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lair.ast import (
+    Invoke,
     StaticPar,
+    StaticSeq,
     SymbolicProgram,
     TimingConst,
     TimingConstraint,
@@ -133,6 +135,27 @@ class ResolvedStaticPar:
 
 
 @dataclass(frozen=True)
+class ResolvedStaticSeq:
+    steps: tuple[
+        ResolvedInvoke
+        | ResolvedStaticPar
+        | "ResolvedStaticSeq",
+        ...
+    ]
+    latency: int
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": "resolved_static_seq",
+            "latency": self.latency,
+            "steps": [
+                step.to_dict()
+                for step in self.steps
+            ],
+        }
+
+
+@dataclass(frozen=True)
 class ResolvedProgram:
     """
     Program after all required timing facts are concrete and all
@@ -143,7 +166,7 @@ class ResolvedProgram:
     generators: tuple[ResolvedGenerator, ...]
     bindings: tuple[ResolvedTimingBinding, ...]
     constraint_checks: tuple[ConstraintCheck, ...]
-    body: ResolvedStaticPar
+    body: ResolvedStaticPar | ResolvedStaticSeq
 
     def to_dict(self) -> dict:
         return {
@@ -224,40 +247,162 @@ def evaluate_constraint(
     )
 
 
-def resolve_static_par(
-    body: StaticPar,
-    component_latencies: dict[str, int],
-) -> ResolvedStaticPar:
-    invokes = []
+def _bind_control_timing(
+    name: str,
+    latency: int,
+    values: dict[str, int],
+) -> None:
+    """
+    Publish a timing fact inferred from control structure.
 
-    for invoke in body.invokes:
+    Structural timing is compiler-derived and therefore cannot be
+    overridden by generator/environment timing facts.
+    """
+
+    if name in values:
+        raise ResolutionError(
+            "Control-derived timing variable was already supplied: "
+            f"{name}"
+        )
+
+    values[name] = latency
+
+
+def resolve_control(
+    control: Invoke | StaticPar | StaticSeq,
+    component_latencies: dict[str, int],
+    values: dict[str, int],
+) -> (
+    ResolvedInvoke
+    | ResolvedStaticPar
+    | ResolvedStaticSeq
+):
+    """
+    Recursively infer latency from static control structure.
+
+    Invoke:
+        latency(component)
+
+    StaticPar:
+        max(child latencies)
+
+    StaticSeq:
+        sum(child latencies)
+    """
+
+    if isinstance(control, Invoke):
         try:
             latency = component_latencies[
-                invoke.component
+                control.component
             ]
         except KeyError as exc:
             raise ResolutionError(
                 "No resolved latency for component: "
-                f"{invoke.component}"
+                f"{control.component}"
             ) from exc
 
-        invokes.append(
-            ResolvedInvoke(
-                component=invoke.component,
-                args=invoke.args,
-                latency=latency,
-            )
+        return ResolvedInvoke(
+            component=control.component,
+            args=control.args,
+            latency=latency,
         )
 
-    resolved_invokes = tuple(invokes)
+    if isinstance(control, StaticPar):
+        resolved_invokes = tuple(
+            resolve_control(
+                invoke,
+                component_latencies,
+                values,
+            )
+            for invoke in control.invokes
+        )
 
-    return ResolvedStaticPar(
-        invokes=resolved_invokes,
-        latency=max(
+        if not all(
+            isinstance(
+                invoke,
+                ResolvedInvoke,
+            )
+            for invoke in resolved_invokes
+        ):
+            raise ResolutionError(
+                "StaticPar resolved to a non-invoke child."
+            )
+
+        latency = max(
             invoke.latency
             for invoke in resolved_invokes
-        ),
+        )
+
+        if control.timing_var is not None:
+            _bind_control_timing(
+                control.timing_var.name,
+                latency,
+                values,
+            )
+
+        return ResolvedStaticPar(
+            invokes=resolved_invokes,
+            latency=latency,
+        )
+
+    if isinstance(control, StaticSeq):
+        resolved_steps = tuple(
+            resolve_control(
+                step,
+                component_latencies,
+                values,
+            )
+            for step in control.steps
+        )
+
+        latency = sum(
+            step.latency
+            for step in resolved_steps
+        )
+
+        if control.timing_var is not None:
+            _bind_control_timing(
+                control.timing_var.name,
+                latency,
+                values,
+            )
+
+        return ResolvedStaticSeq(
+            steps=resolved_steps,
+            latency=latency,
+        )
+
+    raise TypeError(
+        "Unsupported symbolic control node: "
+        f"{type(control).__name__}"
     )
+
+
+def resolve_static_par(
+    body: StaticPar,
+    component_latencies: dict[str, int],
+) -> ResolvedStaticPar:
+    """
+    Backward-compatible V1.0 helper.
+
+    New code should use resolve_control().
+    """
+
+    resolved = resolve_control(
+        body,
+        component_latencies,
+        {},
+    )
+
+    if not isinstance(
+        resolved,
+        ResolvedStaticPar,
+    ):
+        raise ResolutionError(
+            "Expected resolved static parallel region."
+        )
+
+    return resolved
 
 
 def resolve_program(
@@ -292,7 +437,20 @@ def resolve_program(
             generator.instance
         ] = latency
 
-    # Evaluate symbolic timing bindings in program order.
+    # Infer timing directly from the accelerator control tree.
+    #
+    # Any named control-region timings become ordinary timing facts
+    # available to later symbolic bindings and constraints.
+    resolved_body = resolve_control(
+        program.body,
+        component_latencies,
+        values,
+    )
+
+    # Evaluate explicit symbolic timing bindings in program order.
+    #
+    # These remain useful for user-defined relationships, but control
+    # composition itself no longer requires handwritten equations.
     resolved_bindings = []
 
     for binding in program.bindings:
@@ -301,7 +459,7 @@ def resolve_program(
         if target in values:
             raise ResolutionError(
                 "Derived timing variable was already supplied "
-                f"by the environment: {target}"
+                f"or inferred: {target}"
             )
 
         value = evaluate_expr(
@@ -318,7 +476,8 @@ def resolve_program(
             )
         )
 
-    # Discharge symbolic timing constraints.
+    # Discharge constraints only after generator timing, structural
+    # timing, and explicit symbolic bindings are all available.
     checks = tuple(
         evaluate_constraint(
             constraint,
@@ -331,7 +490,9 @@ def resolve_program(
         check.passed
         for check in checks
     ):
-        raise ConstraintViolation(checks)
+        raise ConstraintViolation(
+            checks
+        )
 
     resolved_generators = tuple(
         ResolvedGenerator(
@@ -344,11 +505,6 @@ def resolve_program(
             ],
         )
         for generator in program.generators
-    )
-
-    resolved_body = resolve_static_par(
-        program.body,
-        component_latencies,
     )
 
     return ResolvedProgram(

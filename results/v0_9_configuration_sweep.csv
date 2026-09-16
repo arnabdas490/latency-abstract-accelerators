@@ -1,0 +1,6 @@
+config,L_A,L_B,T,expected_valid,measured_L_A,measured_L_B,rtl_latency_validated,rtl_sha256,opaque_li_cycles,opaque_li_correct,la_accepted,la_hardware_emitted,manual_static_cycles,manual_static_correct,la_cycles,la_correct,manual_equals_la,manual_timing_literals,manual_source_file
+C1,2,5,5,True,2,5,True,79599a00b41f3fa00f494268cc15f06635e8753275e16aab692b73fbc0b31776,50,True,True,True,35,True,35,True,True,2,baselines/v0_8_fixed_manual_static.futil
+C2,5,2,5,True,5,2,True,ef9879571aea21faa9d401c35d17aaf6144315144fc37937c724f4e647c4dbda,50,True,True,True,35,True,35,True,True,2,baselines/v0_9_manual_static_5_2.futil
+C3,3,3,3,True,3,3,True,df359bceb03bddf4e5de6dfb2ac7a95b2c6e638b9099fea31049fba93c487485,42,True,True,True,27,True,27,True,True,2,baselines/v0_9_manual_static_3_3.futil
+C4,4,7,7,False,4,7,True,08ef0a7b883cb884df9f1c9559da55dea02bfb097c0c0d2f899616753504b8e0,58,True,False,False,,,,,,,
+C5,8,3,8,False,8,3,True,18a38dcb3fa7765b2ad7f971ff4c2636824724979754add6be0da8d51e1dd698,62,True,False,False,,,,,,,

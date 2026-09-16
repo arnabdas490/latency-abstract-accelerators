@@ -51,6 +51,9 @@ module tb;
   integer start_a = -1;
   integer start_b = -1;
 
+  logic seen_a = 0;
+  logic seen_b = 0;
+
   kernel_a_li a (
     .clk(clk),
     .reset(reset),
@@ -80,19 +83,24 @@ module tb;
     if (go_b && start_b < 0)
       start_b <= cycle;
 
-    if (done_a)
+    if (done_a) begin
       $display(
         "A_DONE cycle=%0d start=%0d elapsed=%0d out=%0d",
         cycle, start_a, cycle - start_a, out_a
       );
+      seen_a <= 1'b1;
+    end
 
     if (done_b) begin
       $display(
         "B_DONE cycle=%0d start=%0d elapsed=%0d out=%0d",
         cycle, start_b, cycle - start_b, out_b
       );
-      $finish;
+      seen_b <= 1'b1;
     end
+
+    if ((seen_a || done_a) && (seen_b || done_b))
+      $finish;
   end
 
   initial begin
@@ -217,7 +225,12 @@ def main():
     print(f"timing_correct     = {timing_correct}")
     print(f"functional_correct = {functional_correct}")
     print(f"RTL SHA256 = {report['rtl_sha256']}")
-    print(f"Saved: {args.output.relative_to(ROOT)}")
+    try:
+        display_output = args.output.relative_to(ROOT)
+    except ValueError:
+        display_output = args.output
+
+    print(f"Saved: {display_output}")
 
     if not timing_correct or not functional_correct:
         raise SystemExit(2)

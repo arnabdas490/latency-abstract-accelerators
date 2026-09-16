@@ -1,0 +1,6 @@
+configuration,L_A,L_B,T_pair,T_tail,T_total,compiler_accepted,measured_A,measured_B,rtl_timing_correct,rtl_functional_correct,calyx_emitted,hardware_cycles,expected_cycles,cycle_match,memory_correct
+C1,2,5,5,2,7,True,2,5,True,True,True,43,43,True,True
+C2,5,2,5,5,10,False,5,2,True,True,False,,,,
+C3,3,3,3,3,6,True,3,3,True,True,True,39,39,True,True
+C4,4,7,7,4,11,False,4,7,True,True,False,,,,
+C5,8,3,8,8,16,False,8,3,True,True,False,,,,

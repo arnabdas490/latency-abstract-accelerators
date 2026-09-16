@@ -1,0 +1,165 @@
+{
+  "explicit_timing_bindings": 0,
+  "results": [
+    {
+      "L_A": 2,
+      "L_B": 5,
+      "T_pair": 5,
+      "T_tail": 2,
+      "T_total": 7,
+      "calyx_emitted": true,
+      "compiler_accepted": true,
+      "configuration": "C1",
+      "constraint_failures": [],
+      "cycle_match": true,
+      "expected_cycles": 43,
+      "hardware_cycles": 43,
+      "hardware_memory": [
+        10,
+        4,
+        23,
+        0
+      ],
+      "measured_A": 2,
+      "measured_B": 5,
+      "memory_correct": true,
+      "rtl_functional_correct": true,
+      "rtl_sha256": "79599a00b41f3fa00f494268cc15f06635e8753275e16aab692b73fbc0b31776",
+      "rtl_timing_correct": true,
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+    },
+    {
+      "L_A": 5,
+      "L_B": 2,
+      "T_pair": 5,
+      "T_tail": 5,
+      "T_total": 10,
+      "calyx_emitted": false,
+      "compiler_accepted": false,
+      "configuration": "C2",
+      "constraint_failures": [
+        {
+          "left_value": 10,
+          "name": "total_deadline",
+          "op": "<=",
+          "right_value": 8
+        }
+      ],
+      "cycle_match": null,
+      "expected_cycles": null,
+      "hardware_cycles": null,
+      "hardware_memory": null,
+      "measured_A": 5,
+      "measured_B": 2,
+      "memory_correct": null,
+      "rtl_functional_correct": true,
+      "rtl_sha256": "ef9879571aea21faa9d401c35d17aaf6144315144fc37937c724f4e647c4dbda",
+      "rtl_timing_correct": true,
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+    },
+    {
+      "L_A": 3,
+      "L_B": 3,
+      "T_pair": 3,
+      "T_tail": 3,
+      "T_total": 6,
+      "calyx_emitted": true,
+      "compiler_accepted": true,
+      "configuration": "C3",
+      "constraint_failures": [],
+      "cycle_match": true,
+      "expected_cycles": 39,
+      "hardware_cycles": 39,
+      "hardware_memory": [
+        10,
+        4,
+        23,
+        0
+      ],
+      "measured_A": 3,
+      "measured_B": 3,
+      "memory_correct": true,
+      "rtl_functional_correct": true,
+      "rtl_sha256": "df359bceb03bddf4e5de6dfb2ac7a95b2c6e638b9099fea31049fba93c487485",
+      "rtl_timing_correct": true,
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+    },
+    {
+      "L_A": 4,
+      "L_B": 7,
+      "T_pair": 7,
+      "T_tail": 4,
+      "T_total": 11,
+      "calyx_emitted": false,
+      "compiler_accepted": false,
+      "configuration": "C4",
+      "constraint_failures": [
+        {
+          "left_value": 11,
+          "name": "total_deadline",
+          "op": "<=",
+          "right_value": 8
+        }
+      ],
+      "cycle_match": null,
+      "expected_cycles": null,
+      "hardware_cycles": null,
+      "hardware_memory": null,
+      "measured_A": 4,
+      "measured_B": 7,
+      "memory_correct": null,
+      "rtl_functional_correct": true,
+      "rtl_sha256": "08ef0a7b883cb884df9f1c9559da55dea02bfb097c0c0d2f899616753504b8e0",
+      "rtl_timing_correct": true,
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+    },
+    {
+      "L_A": 8,
+      "L_B": 3,
+      "T_pair": 8,
+      "T_tail": 8,
+      "T_total": 16,
+      "calyx_emitted": false,
+      "compiler_accepted": false,
+      "configuration": "C5",
+      "constraint_failures": [
+        {
+          "left_value": 16,
+          "name": "total_deadline",
+          "op": "<=",
+          "right_value": 8
+        }
+      ],
+      "cycle_match": null,
+      "expected_cycles": null,
+      "hardware_cycles": null,
+      "hardware_memory": null,
+      "measured_A": 8,
+      "measured_B": 3,
+      "memory_correct": null,
+      "rtl_functional_correct": true,
+      "rtl_sha256": "18a38dcb3fa7765b2ad7f971ff4c2636824724979754add6be0da8d51e1dd698",
+      "rtl_timing_correct": true,
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+    }
+  ],
+  "source": "examples/v1_3_components.lair",
+  "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+  "summary": {
+    "acceptance_matches": true,
+    "accepted_cycles_match": true,
+    "accepted_memory_correct": true,
+    "all_rtl_functional_correct": true,
+    "all_rtl_timing_correct": true,
+    "matches_frozen_manifest": true,
+    "rejected_emit_no_calyx": true,
+    "same_source": true,
+    "same_symbolic_ir": true
+  },
+  "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+}

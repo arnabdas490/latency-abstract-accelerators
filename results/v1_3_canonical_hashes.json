@@ -1,0 +1,17 @@
+{
+  "bindings": 0,
+  "component_exports": {
+    "pair": "T_pair",
+    "pipeline": "T_total",
+    "tail": "T_tail"
+  },
+  "components": [
+    "pair",
+    "tail",
+    "pipeline"
+  ],
+  "entry": "pipeline",
+  "source": "examples/v1_3_components.lair",
+  "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+  "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+}

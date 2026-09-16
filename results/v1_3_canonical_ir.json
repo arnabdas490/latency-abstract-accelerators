@@ -1,0 +1,153 @@
+{
+  "bindings": [],
+  "components": [
+    {
+      "args": [
+        "x"
+      ],
+      "body": {
+        "invokes": [
+          {
+            "args": [
+              "x"
+            ],
+            "component": "A",
+            "kind": "invoke"
+          },
+          {
+            "args": [
+              "x"
+            ],
+            "component": "B",
+            "kind": "invoke"
+          }
+        ],
+        "kind": "static_par"
+      },
+      "kind": "component_decl",
+      "latency_var": {
+        "kind": "timing_var",
+        "name": "T_pair"
+      },
+      "name": "pair"
+    },
+    {
+      "args": [
+        "x"
+      ],
+      "body": {
+        "kind": "static_seq",
+        "steps": [
+          {
+            "args": [
+              "x"
+            ],
+            "component": "A",
+            "kind": "invoke"
+          }
+        ]
+      },
+      "kind": "component_decl",
+      "latency_var": {
+        "kind": "timing_var",
+        "name": "T_tail"
+      },
+      "name": "tail"
+    },
+    {
+      "args": [
+        "x"
+      ],
+      "body": {
+        "kind": "static_seq",
+        "steps": [
+          {
+            "args": [
+              "x"
+            ],
+            "component": "pair",
+            "kind": "invoke"
+          },
+          {
+            "args": [
+              "x"
+            ],
+            "component": "tail",
+            "kind": "invoke"
+          }
+        ]
+      },
+      "kind": "component_decl",
+      "latency_var": {
+        "kind": "timing_var",
+        "name": "T_total"
+      },
+      "name": "pipeline"
+    }
+  ],
+  "constraints": [
+    {
+      "kind": "timing_constraint",
+      "left": {
+        "kind": "timing_var",
+        "name": "L_A"
+      },
+      "name": "positive_latency_a",
+      "op": ">=",
+      "right": {
+        "kind": "timing_const",
+        "value": 1
+      }
+    },
+    {
+      "kind": "timing_constraint",
+      "left": {
+        "kind": "timing_var",
+        "name": "L_B"
+      },
+      "name": "positive_latency_b",
+      "op": ">=",
+      "right": {
+        "kind": "timing_const",
+        "value": 1
+      }
+    },
+    {
+      "kind": "timing_constraint",
+      "left": {
+        "kind": "timing_var",
+        "name": "T_total"
+      },
+      "name": "total_deadline",
+      "op": "<=",
+      "right": {
+        "kind": "timing_const",
+        "value": 8
+      }
+    }
+  ],
+  "entry": "pipeline",
+  "generators": [
+    {
+      "generator": "toy_generator",
+      "instance": "A",
+      "kernel": "kernel_a",
+      "kind": "generator_decl",
+      "latency_var": {
+        "kind": "timing_var",
+        "name": "L_A"
+      }
+    },
+    {
+      "generator": "toy_generator",
+      "instance": "B",
+      "kernel": "kernel_b",
+      "kind": "generator_decl",
+      "latency_var": {
+        "kind": "timing_var",
+        "name": "L_B"
+      }
+    }
+  ],
+  "kind": "symbolic_program"
+}

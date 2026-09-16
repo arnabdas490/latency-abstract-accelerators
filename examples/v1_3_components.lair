@@ -1,0 +1,34 @@
+# V1.3 reusable component timing-interface example.
+#
+# Generator latencies remain unknown in source.
+# Component body latencies are inferred from static control structure.
+# Parents consume only exported component timing interfaces.
+
+generator A = toy_generator(kernel_a) latency -> L_A
+generator B = toy_generator(kernel_b) latency -> L_B
+
+require positive_latency_a: L_A >= 1
+require positive_latency_b: L_B >= 1
+require total_deadline: T_total <= 8
+
+component pair(x) latency -> T_pair {
+    static par {
+        invoke A(x)
+        invoke B(x)
+    }
+}
+
+component tail(x) latency -> T_tail {
+    static seq {
+        invoke A(x)
+    }
+}
+
+component pipeline(x) latency -> T_total {
+    static seq {
+        invoke pair(x)
+        invoke tail(x)
+    }
+}
+
+entry pipeline

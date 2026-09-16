@@ -1,0 +1,22 @@
+# V1.2 hierarchical latency-abstract example.
+#
+# Generator latencies are unknown here.
+# Timing of T_pair and T_total is inferred from control structure.
+
+generator A = toy_generator(kernel_a) latency -> L_A
+generator B = toy_generator(kernel_b) latency -> L_B
+
+require positive_latency_a: L_A >= 1
+require positive_latency_b: L_B >= 1
+require total_deadline: T_total <= 8
+
+component pipeline(x) {
+    static seq -> T_total {
+        static par -> T_pair {
+            invoke A(x)
+            invoke B(x)
+        }
+
+        invoke A(x)
+    }
+}

@@ -2,15 +2,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lair.resolver import ResolvedProgram
+from lair.resolver import (
+    ResolvedInvoke,
+    ResolvedProgram,
+    ResolvedStaticPar,
+    ResolvedStaticSeq,
+)
 
 
 class CalyxLoweringError(Exception):
     """Raised when a resolved program cannot be lowered to Calyx."""
 
 
-def _require_resolved_program(program: object) -> ResolvedProgram:
-    if not isinstance(program, ResolvedProgram):
+def _require_resolved_program(
+    program: object,
+) -> ResolvedProgram:
+    if not isinstance(
+        program,
+        ResolvedProgram,
+    ):
         raise TypeError(
             "Calyx backend accepts only ResolvedProgram; "
             f"received {type(program).__name__}"
@@ -28,71 +38,267 @@ def _generator_by_instance(
     }
 
 
-def lower_v1_pair_to_calyx(
+def _validate_resolved_control(
+    control: (
+        ResolvedInvoke
+        | ResolvedStaticPar
+        | ResolvedStaticSeq
+    ),
+    component_latencies: dict[str, int],
+) -> int:
+    """
+    Independently verify that resolved control timing agrees with
+    generator timing and static-control composition semantics.
+
+    Invoke:
+        component latency
+
+    StaticPar:
+        max(child latencies)
+
+    StaticSeq:
+        sum(child latencies)
+    """
+
+    if isinstance(
+        control,
+        ResolvedInvoke,
+    ):
+        try:
+            expected = component_latencies[
+                control.component
+            ]
+        except KeyError as exc:
+            raise CalyxLoweringError(
+                "Resolved control invokes unknown component: "
+                f"{control.component}"
+            ) from exc
+
+        if control.latency != expected:
+            raise CalyxLoweringError(
+                "Resolved invoke latency does not match "
+                "generator latency for component "
+                f"{control.component}."
+            )
+
+        return control.latency
+
+    if isinstance(
+        control,
+        ResolvedStaticPar,
+    ):
+        child_latencies = [
+            _validate_resolved_control(
+                invoke,
+                component_latencies,
+            )
+            for invoke in control.invokes
+        ]
+
+        expected = max(
+            child_latencies
+        )
+
+        if control.latency != expected:
+            raise CalyxLoweringError(
+                "Resolved static-par latency is inconsistent "
+                "with child latencies."
+            )
+
+        return control.latency
+
+    if isinstance(
+        control,
+        ResolvedStaticSeq,
+    ):
+        child_latencies = [
+            _validate_resolved_control(
+                step,
+                component_latencies,
+            )
+            for step in control.steps
+        ]
+
+        expected = sum(
+            child_latencies
+        )
+
+        if control.latency != expected:
+            raise CalyxLoweringError(
+                "Resolved static-seq latency is inconsistent "
+                "with child latencies."
+            )
+
+        return control.latency
+
+    raise CalyxLoweringError(
+        "Unsupported resolved control node: "
+        f"{type(control).__name__}"
+    )
+
+
+def _lower_static_control(
+    control: (
+        ResolvedInvoke
+        | ResolvedStaticPar
+        | ResolvedStaticSeq
+    ),
+    *,
+    cell_names: dict[str, str],
+    indent: int,
+) -> list[str]:
+    """
+    Recursively lower resolved static control to Calyx/Piezo control.
+    """
+
+    pad = " " * indent
+
+    if isinstance(
+        control,
+        ResolvedInvoke,
+    ):
+        try:
+            cell = cell_names[
+                control.component
+            ]
+        except KeyError as exc:
+            raise CalyxLoweringError(
+                "No Calyx cell for resolved component: "
+                f"{control.component}"
+            ) from exc
+
+        # The current toy backend supports the single x argument.
+        if control.args != ("x",):
+            raise CalyxLoweringError(
+                "Toy Calyx backend currently supports "
+                "invoke arguments exactly ('x',); "
+                f"got {control.args!r} for "
+                f"{control.component}."
+            )
+
+        return [
+            f"{pad}static invoke "
+            f"{cell}(x=x.out)();"
+        ]
+
+    if isinstance(
+        control,
+        ResolvedStaticPar,
+    ):
+        lines = [
+            f"{pad}static par {{"
+        ]
+
+        for invoke in control.invokes:
+            lines.extend(
+                _lower_static_control(
+                    invoke,
+                    cell_names=cell_names,
+                    indent=indent + 2,
+                )
+            )
+
+        lines.append(
+            f"{pad}}}"
+        )
+
+        return lines
+
+    if isinstance(
+        control,
+        ResolvedStaticSeq,
+    ):
+        lines = [
+            f"{pad}static seq {{"
+        ]
+
+        for step in control.steps:
+            lines.extend(
+                _lower_static_control(
+                    step,
+                    cell_names=cell_names,
+                    indent=indent + 2,
+                )
+            )
+
+        lines.append(
+            f"{pad}}}"
+        )
+
+        return lines
+
+    raise CalyxLoweringError(
+        "Unsupported resolved control node: "
+        f"{type(control).__name__}"
+    )
+
+
+def lower_resolved_program_to_calyx(
     program: ResolvedProgram,
     *,
-    extern_rtl: str = "../../baselines/v0_8_fixed_li_kernels.sv",
+    extern_rtl: str = (
+        "../../baselines/"
+        "v0_8_fixed_li_kernels.sv"
+    ),
 ) -> str:
     """
-    Lower the resolved V1.0 two-kernel example to ordinary Calyx/Piezo.
+    Lower resolved LAIR static control to ordinary Calyx/Piezo.
 
-    Important abstraction boundary:
-      - this function receives only ResolvedProgram;
-      - it does not read generator contracts;
-      - it does not resolve symbolic timing;
-      - it does not infer latency from RTL.
+    Abstraction boundary:
+      - accepts only ResolvedProgram;
+      - does not read generator contracts;
+      - does not resolve symbolic timing;
+      - does not infer latency from RTL;
+      - recursively validates and lowers already-resolved
+        static control.
 
-    Concrete @interval values come exclusively from the resolved IR.
+    The surrounding runtime-loop/data-path shell remains the
+    two-generator toy experiment used by V1.0-V1.2.
     """
 
-    program = _require_resolved_program(program)
+    program = _require_resolved_program(
+        program
+    )
 
-    generators = _generator_by_instance(program)
+    generators = _generator_by_instance(
+        program
+    )
 
+    # V1.2 generalizes control composition, not generator-interface
+    # generation. Preserve the established A/B toy-kernel shell.
     try:
         gen_a = generators["A"]
         gen_b = generators["B"]
     except KeyError as exc:
         raise CalyxLoweringError(
-            "V1.0 pair backend requires generator instances A and B."
+            "Toy backend requires generator instances A and B."
         ) from exc
 
-    invokes = {
-        invoke.component: invoke
-        for invoke in program.body.invokes
+    component_latencies = {
+        generator.instance: generator.latency
+        for generator in program.generators
     }
 
-    try:
-        invoke_a = invokes["A"]
-        invoke_b = invokes["B"]
-    except KeyError as exc:
-        raise CalyxLoweringError(
-            "V1.0 pair backend requires invokes of A and B."
-        ) from exc
-
-    if invoke_a.latency != gen_a.latency:
-        raise CalyxLoweringError(
-            "Resolved invoke A latency does not match generator A."
-        )
-
-    if invoke_b.latency != gen_b.latency:
-        raise CalyxLoweringError(
-            "Resolved invoke B latency does not match generator B."
-        )
-
-    expected_parallel_latency = max(
-        gen_a.latency,
-        gen_b.latency,
+    _validate_resolved_control(
+        program.body,
+        component_latencies,
     )
-
-    if program.body.latency != expected_parallel_latency:
-        raise CalyxLoweringError(
-            "Resolved static-par latency is inconsistent with "
-            "resolved generator latencies."
-        )
 
     la = gen_a.latency
     lb = gen_b.latency
+
+    cell_names = {
+        "A": "a",
+        "B": "b",
+    }
+
+    body_control = "\n".join(
+        _lower_static_control(
+            program.body,
+            cell_names=cell_names,
+            indent=10,
+        )
+    )
 
     return f'''import "primitives/core.futil";
 import "primitives/memories/comb.futil";
@@ -130,6 +336,7 @@ component main() -> () {{
     add_final = std_add(32);
     lt = std_lt(32);
   }}
+
   wires {{
     group load_x {{
       mem.addr0 = 2'd0;
@@ -137,22 +344,26 @@ component main() -> () {{
       x.write_en = 1'b1;
       load_x[done] = x.done;
     }}
+
     group init_counter {{
       counter.in = 32'd0;
       counter.write_en = 1'b1;
       init_counter[done] = counter.done;
     }}
+
     comb group cond {{
       mem.addr0 = 2'd1;
       lt.left = counter.out;
       lt.right = mem.read_data;
     }}
+
     static<1> group incr_counter {{
       add_counter.left = counter.out;
       add_counter.right = 32'd1;
       counter.in = add_counter.out;
       counter.write_en = 1'b1;
     }}
+
     group write_result {{
       add_final.left = a.out;
       add_final.right = b.out;
@@ -162,16 +373,14 @@ component main() -> () {{
       write_result[done] = mem.done;
     }}
   }}
+
   control {{
     seq {{
       load_x;
       init_counter;
       while lt.out with cond {{
         static seq {{
-          static par {{
-            static invoke a(x=x.out)();
-            static invoke b(x=x.out)();
-          }}
+{body_control}
           incr_counter;
         }}
       }}
@@ -182,19 +391,22 @@ component main() -> () {{
 '''
 
 
-def write_v1_pair_calyx(
+def write_resolved_program_calyx(
     program: ResolvedProgram,
     output: Path,
     *,
-    extern_rtl: str = "../../baselines/v0_8_fixed_li_kernels.sv",
+    extern_rtl: str = (
+        "../../baselines/"
+        "v0_8_fixed_li_kernels.sv"
+    ),
 ) -> None:
     """
-    Lower an already-resolved program and write the resulting Calyx.
+    Lower an already-resolved program and write concrete Calyx.
 
     No output file is created unless lowering succeeds.
     """
 
-    text = lower_v1_pair_to_calyx(
+    text = lower_resolved_program_to_calyx(
         program,
         extern_rtl=extern_rtl,
     )
@@ -204,4 +416,40 @@ def write_v1_pair_calyx(
         exist_ok=True,
     )
 
-    output.write_text(text)
+    output.write_text(
+        text
+    )
+
+
+# ---------------------------------------------------------------------------
+# Backward-compatible V1.0/V1.1 entry points.
+# ---------------------------------------------------------------------------
+
+def lower_v1_pair_to_calyx(
+    program: ResolvedProgram,
+    *,
+    extern_rtl: str = (
+        "../../baselines/"
+        "v0_8_fixed_li_kernels.sv"
+    ),
+) -> str:
+    return lower_resolved_program_to_calyx(
+        program,
+        extern_rtl=extern_rtl,
+    )
+
+
+def write_v1_pair_calyx(
+    program: ResolvedProgram,
+    output: Path,
+    *,
+    extern_rtl: str = (
+        "../../baselines/"
+        "v0_8_fixed_li_kernels.sv"
+    ),
+) -> None:
+    write_resolved_program_calyx(
+        program,
+        output,
+        extern_rtl=extern_rtl,
+    )

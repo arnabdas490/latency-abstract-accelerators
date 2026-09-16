@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
-from lair.calyx_backend import write_v1_pair_calyx
+from lair.calyx_backend import write_resolved_program_calyx
 from lair.environment import TimingEnvironment
 from lair.generator_elaboration import (
     ElaborationResult,
@@ -99,7 +99,7 @@ def compile_lair_file(
         )
     ).as_posix()
 
-    write_v1_pair_calyx(
+    write_resolved_program_calyx(
         resolved,
         calyx_output,
         extern_rtl=relative_rtl,

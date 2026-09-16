@@ -505,6 +505,195 @@ class SymbolicProgram:
                     )
                 )
 
+
+        else:
+            # -----------------------------------------------------------
+            # V1.3 component-program namespace validation
+            # -----------------------------------------------------------
+
+            component_names = [
+                component.name
+                for component in self.components
+            ]
+
+            if (
+                len(component_names)
+                != len(set(component_names))
+            ):
+                raise ValueError(
+                    "Component names must be unique."
+                )
+
+            generator_name_set = set(
+                generator_names
+            )
+
+            component_name_set = set(
+                component_names
+            )
+
+            name_collisions = (
+                generator_name_set
+                & component_name_set
+            )
+
+            if name_collisions:
+                raise ValueError(
+                    "Generator/component names collide: "
+                    + ", ".join(
+                        sorted(name_collisions)
+                    )
+                )
+
+            if (
+                self.entry
+                not in component_name_set
+            ):
+                raise ValueError(
+                    "Entry references undeclared component: "
+                    f"{self.entry}"
+                )
+
+            declared_invocation_targets = (
+                generator_name_set
+                | component_name_set
+            )
+
+            for component in self.components:
+                for invoke in _iter_control_invokes(
+                    component.body
+                ):
+                    if (
+                        invoke.component
+                        not in declared_invocation_targets
+                    ):
+                        raise ValueError(
+                            "Invoke references undeclared "
+                            "generator/component: "
+                            f"{invoke.component}"
+                        )
+
+            generator_latency_name_list = [
+                generator.latency_var.name
+                for generator in self.generators
+            ]
+
+            if (
+                len(generator_latency_name_list)
+                != len(
+                    set(
+                        generator_latency_name_list
+                    )
+                )
+            ):
+                raise ValueError(
+                    "Generator latency variables "
+                    "must be unique in V1.3 programs."
+                )
+
+            generator_latency_names = set(
+                generator_latency_name_list
+            )
+
+            component_timing_names = [
+                component.latency_var.name
+                for component in self.components
+            ]
+
+            if (
+                len(component_timing_names)
+                != len(
+                    set(component_timing_names)
+                )
+            ):
+                raise ValueError(
+                    "Component timing exports "
+                    "must be unique."
+                )
+
+            component_timing_name_set = set(
+                component_timing_names
+            )
+
+            export_generator_collisions = (
+                component_timing_name_set
+                & generator_latency_names
+            )
+
+            if export_generator_collisions:
+                raise ValueError(
+                    "Component timing exports collide "
+                    "with generator latency variables: "
+                    + ", ".join(
+                        sorted(
+                            export_generator_collisions
+                        )
+                    )
+                )
+
+            export_binding_collisions = (
+                component_timing_name_set
+                & set(binding_names)
+            )
+
+            if export_binding_collisions:
+                raise ValueError(
+                    "Component timing exports collide "
+                    "with explicit timing bindings: "
+                    + ", ".join(
+                        sorted(
+                            export_binding_collisions
+                        )
+                    )
+                )
+
+            region_timing_names = []
+
+            for component in self.components:
+                region_timing_names.extend(
+                    var.name
+                    for var
+                    in _iter_control_timing_vars(
+                        component.body
+                    )
+                )
+
+            if (
+                len(region_timing_names)
+                != len(
+                    set(region_timing_names)
+                )
+            ):
+                raise ValueError(
+                    "Component control-region timing "
+                    "variables must be unique."
+                )
+
+            region_timing_name_set = set(
+                region_timing_names
+            )
+
+            region_reserved_collisions = (
+                region_timing_name_set
+                & (
+                    generator_latency_names
+                    | set(binding_names)
+                    | component_timing_name_set
+                )
+            )
+
+            if region_reserved_collisions:
+                raise ValueError(
+                    "Component control-region timing "
+                    "variables collide with reserved "
+                    "timing names: "
+                    + ", ".join(
+                        sorted(
+                            region_reserved_collisions
+                        )
+                    )
+                )
+
     def to_dict(self) -> dict:
         """
         Canonical structural representation.

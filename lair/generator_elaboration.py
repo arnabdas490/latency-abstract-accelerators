@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 
 from lair.ast import SymbolicProgram
+from lair.environment import TimingEnvironment
 
 
 class GeneratorElaborationError(Exception):
@@ -381,3 +382,23 @@ def elaborate_toy_generators(
     return ElaborationResult(
         generators=results,
     )
+
+
+def timing_environment_from_elaboration(
+    elaboration: ElaborationResult,
+) -> TimingEnvironment:
+    """
+    Convert generator-produced timing facts into the compiler timing
+    environment.
+
+    This is the only V1.1 bridge from GeneratorResult latency metadata
+    to the symbolic timing resolver.
+    """
+
+    return TimingEnvironment(
+        {
+            result.latency_var: result.latency
+            for result in elaboration.generators
+        }
+    )
+

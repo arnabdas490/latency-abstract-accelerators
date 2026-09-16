@@ -306,5 +306,132 @@ class ToyGeneratorExecutionTests(unittest.TestCase):
 
 
 
+class TimingEnvironmentBridgeTests(unittest.TestCase):
+    def test_elaboration_constructs_timing_environment(self):
+        import tempfile
+        from pathlib import Path
+
+        from lair.examples import make_v1_0_pair_program
+        from lair.generator_elaboration import (
+            ToyGeneratorConfig,
+            elaborate_toy_generators,
+            timing_environment_from_elaboration,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            elaboration = elaborate_toy_generators(
+                make_v1_0_pair_program(),
+                ToyGeneratorConfig(
+                    {
+                        "A": 2,
+                        "B": 5,
+                    }
+                ),
+                Path(tmp) / "kernels.sv",
+            )
+
+            environment = (
+                timing_environment_from_elaboration(
+                    elaboration
+                )
+            )
+
+            self.assertEqual(
+                environment.to_dict(),
+                {
+                    "L_A": 2,
+                    "L_B": 5,
+                },
+            )
+
+    def test_reversed_configuration_flows_to_environment(self):
+        import tempfile
+        from pathlib import Path
+
+        from lair.examples import make_v1_0_pair_program
+        from lair.generator_elaboration import (
+            ToyGeneratorConfig,
+            elaborate_toy_generators,
+            timing_environment_from_elaboration,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            elaboration = elaborate_toy_generators(
+                make_v1_0_pair_program(),
+                ToyGeneratorConfig(
+                    {
+                        "A": 5,
+                        "B": 2,
+                    }
+                ),
+                Path(tmp) / "kernels.sv",
+            )
+
+            environment = (
+                timing_environment_from_elaboration(
+                    elaboration
+                )
+            )
+
+            self.assertEqual(
+                environment.require("L_A"),
+                5,
+            )
+
+            self.assertEqual(
+                environment.require("L_B"),
+                2,
+            )
+
+    def test_environment_drives_resolver_without_manual_latency_dict(self):
+        import tempfile
+        from pathlib import Path
+
+        from lair.examples import make_v1_0_pair_program
+        from lair.generator_elaboration import (
+            ToyGeneratorConfig,
+            elaborate_toy_generators,
+            timing_environment_from_elaboration,
+        )
+        from lair.resolver import resolve_program
+
+        program = make_v1_0_pair_program()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            elaboration = elaborate_toy_generators(
+                program,
+                ToyGeneratorConfig(
+                    {
+                        "A": 5,
+                        "B": 2,
+                    }
+                ),
+                Path(tmp) / "kernels.sv",
+            )
+
+            environment = (
+                timing_environment_from_elaboration(
+                    elaboration
+                )
+            )
+
+            resolved = resolve_program(
+                program,
+                environment,
+            )
+
+            self.assertEqual(
+                resolved.timing_values["L_A"],
+                5,
+            )
+            self.assertEqual(
+                resolved.timing_values["L_B"],
+                2,
+            )
+            self.assertEqual(
+                resolved.timing_values["T"],
+                5,
+            )
+
 if __name__ == "__main__":
     unittest.main()

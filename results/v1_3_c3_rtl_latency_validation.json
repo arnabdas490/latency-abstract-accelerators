@@ -1,0 +1,18 @@
+{
+  "rtl": "/Users/Patron/rn-latency-abstract/examples/generated/v1_3_c3_kernels.sv",
+  "expected_go_to_done_cycles": {
+    "kernel_a": 3,
+    "kernel_b": 3
+  },
+  "measured_go_to_done_cycles": {
+    "kernel_a": 3,
+    "kernel_b": 3
+  },
+  "outputs_for_x_10": {
+    "kernel_a": 11,
+    "kernel_b": 12
+  },
+  "timing_correct": true,
+  "functional_correct": true,
+  "rtl_sha256": "df359bceb03bddf4e5de6dfb2ac7a95b2c6e638b9099fea31049fba93c487485"
+}

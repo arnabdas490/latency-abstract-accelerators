@@ -1,0 +1,94 @@
+{
+  "results": [
+    {
+      "calyx_emitted": true,
+      "compiler_accepted": true,
+      "configuration": "C3",
+      "constraint_failures": [],
+      "generator_latencies": {
+        "A": 3,
+        "B": 3
+      },
+      "hardware_cycles": 39,
+      "hardware_memory": [
+        10,
+        4,
+        23,
+        0
+      ],
+      "measured_rtl_cycles": {
+        "kernel_a": 3,
+        "kernel_b": 3
+      },
+      "rtl_functional_correct": true,
+      "rtl_timing_correct": true,
+      "timing": {
+        "T_pair": 3,
+        "T_tail": 3,
+        "T_total": 6
+      }
+    },
+    {
+      "calyx_emitted": false,
+      "compiler_accepted": false,
+      "configuration": "C4",
+      "constraint_failures": [
+        {
+          "left_value": 11,
+          "name": "total_deadline",
+          "op": "<=",
+          "right_value": 8
+        }
+      ],
+      "generator_latencies": {
+        "A": 4,
+        "B": 7
+      },
+      "hardware_cycles": null,
+      "hardware_memory": null,
+      "measured_rtl_cycles": {
+        "kernel_a": 4,
+        "kernel_b": 7
+      },
+      "rtl_functional_correct": true,
+      "rtl_timing_correct": true,
+      "timing": {
+        "T_pair": 7,
+        "T_tail": 4,
+        "T_total": 11
+      }
+    },
+    {
+      "calyx_emitted": false,
+      "compiler_accepted": false,
+      "configuration": "C5",
+      "constraint_failures": [
+        {
+          "left_value": 16,
+          "name": "total_deadline",
+          "op": "<=",
+          "right_value": 8
+        }
+      ],
+      "generator_latencies": {
+        "A": 8,
+        "B": 3
+      },
+      "hardware_cycles": null,
+      "hardware_memory": null,
+      "measured_rtl_cycles": {
+        "kernel_a": 8,
+        "kernel_b": 3
+      },
+      "rtl_functional_correct": true,
+      "rtl_timing_correct": true,
+      "timing": {
+        "T_pair": 8,
+        "T_tail": 8,
+        "T_total": 16
+      }
+    }
+  ],
+  "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+  "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+}

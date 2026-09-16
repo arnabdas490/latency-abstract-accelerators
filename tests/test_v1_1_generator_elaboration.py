@@ -143,5 +143,168 @@ class ElaborationResultTests(unittest.TestCase):
             )
 
 
+class ToyGeneratorExecutionTests(unittest.TestCase):
+    def test_canonical_pair_emits_real_shared_rtl(self):
+        import tempfile
+        from pathlib import Path
+
+        from lair.examples import make_v1_0_pair_program
+        from lair.generator_elaboration import (
+            ToyGeneratorConfig,
+            elaborate_toy_generators,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "kernels.sv"
+
+            result = elaborate_toy_generators(
+                make_v1_0_pair_program(),
+                ToyGeneratorConfig(
+                    {
+                        "A": 2,
+                        "B": 5,
+                    }
+                ),
+                output,
+            )
+
+            self.assertTrue(output.exists())
+
+            text = output.read_text()
+
+            self.assertIn(
+                "module kernel_a_li",
+                text,
+            )
+            self.assertIn(
+                "module kernel_b_li",
+                text,
+            )
+            self.assertIn(
+                "localparam integer LATENCY = 2;",
+                text,
+            )
+            self.assertIn(
+                "localparam integer LATENCY = 5;",
+                text,
+            )
+
+            by_instance = result.by_instance()
+
+            self.assertEqual(
+                by_instance["A"].latency,
+                2,
+            )
+            self.assertEqual(
+                by_instance["B"].latency,
+                5,
+            )
+
+            self.assertEqual(
+                by_instance["A"].rtl.sha256,
+                by_instance["B"].rtl.sha256,
+            )
+
+    def test_reversed_configuration_is_not_order_dependent(self):
+        import tempfile
+        from pathlib import Path
+
+        from lair.examples import make_v1_0_pair_program
+        from lair.generator_elaboration import (
+            ToyGeneratorConfig,
+            elaborate_toy_generators,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = elaborate_toy_generators(
+                make_v1_0_pair_program(),
+                ToyGeneratorConfig(
+                    {
+                        "A": 5,
+                        "B": 2,
+                    }
+                ),
+                Path(tmp) / "kernels.sv",
+            )
+
+            by_instance = result.by_instance()
+
+            self.assertEqual(
+                by_instance["A"].latency,
+                5,
+            )
+            self.assertEqual(
+                by_instance["B"].latency,
+                2,
+            )
+
+    def test_missing_configuration_emits_no_rtl(self):
+        import tempfile
+        from pathlib import Path
+
+        from lair.examples import make_v1_0_pair_program
+        from lair.generator_elaboration import (
+            GeneratorElaborationError,
+            ToyGeneratorConfig,
+            elaborate_toy_generators,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "kernels.sv"
+
+            with self.assertRaises(
+                GeneratorElaborationError
+            ):
+                elaborate_toy_generators(
+                    make_v1_0_pair_program(),
+                    ToyGeneratorConfig(
+                        {
+                            "A": 2,
+                        }
+                    ),
+                    output,
+                )
+
+            self.assertFalse(
+                output.exists()
+            )
+
+    def test_generated_artifact_sha_matches_file(self):
+        import hashlib
+        import tempfile
+        from pathlib import Path
+
+        from lair.examples import make_v1_0_pair_program
+        from lair.generator_elaboration import (
+            ToyGeneratorConfig,
+            elaborate_toy_generators,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "kernels.sv"
+
+            result = elaborate_toy_generators(
+                make_v1_0_pair_program(),
+                ToyGeneratorConfig(
+                    {
+                        "A": 3,
+                        "B": 3,
+                    }
+                ),
+                output,
+            )
+
+            actual = hashlib.sha256(
+                output.read_bytes()
+            ).hexdigest()
+
+            for generated in result.generators:
+                self.assertEqual(
+                    generated.rtl.sha256,
+                    actual,
+                )
+
+
+
 if __name__ == "__main__":
     unittest.main()

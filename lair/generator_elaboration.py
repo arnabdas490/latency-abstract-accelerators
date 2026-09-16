@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
+import hashlib
+from pathlib import Path
+
+from lair.ast import SymbolicProgram
 
 
 class GeneratorElaborationError(Exception):
@@ -163,3 +168,216 @@ class ElaborationResult:
                 for result in self.generators
             ]
         }
+
+
+@dataclass(frozen=True)
+class ToyGeneratorConfig:
+    """
+    Configuration supplied to the toy hardware generator.
+
+    Values are keyed by logical generator instance, such as A and B.
+    These are generator parameters, not compiler timing facts.
+    """
+
+    latencies: Mapping[str, int]
+
+    def __post_init__(self) -> None:
+        copied = dict(self.latencies)
+
+        for instance, latency in copied.items():
+            if not instance:
+                raise ValueError(
+                    "Toy-generator instance name must be non-empty."
+                )
+
+            if not isinstance(latency, int):
+                raise TypeError(
+                    f"Toy-generator latency for {instance} "
+                    "must be an integer."
+                )
+
+            if latency < 1:
+                raise ValueError(
+                    f"Toy-generator latency for {instance} "
+                    "must be at least one cycle."
+                )
+
+        object.__setattr__(
+            self,
+            "latencies",
+            copied,
+        )
+
+    def latency_for(self, instance: str) -> int:
+        try:
+            return self.latencies[instance]
+        except KeyError as exc:
+            raise GeneratorElaborationError(
+                "Missing toy-generator configuration for "
+                f"instance {instance}."
+            ) from exc
+
+
+def _toy_sv_kernel(
+    module: str,
+    cycles: int,
+    add_const: int,
+) -> str:
+    """
+    Emit the same fixed-latency RTL used by the V0.8/V0.9 experiments.
+    """
+
+    return f'''
+module {module} (
+    input  logic        clk,
+    input  logic        reset,
+    input  logic        go,
+    input  logic [31:0] x,
+    output logic [31:0] out,
+    output logic        done
+);
+
+    localparam integer LATENCY = {cycles};
+    localparam integer COUNT_W =
+        (LATENCY <= 1) ? 1 : $clog2(LATENCY + 1);
+
+    logic busy;
+    logic [COUNT_W-1:0] count;
+    logic [31:0] saved_x;
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            busy    <= 1'b0;
+            count   <= '0;
+            saved_x <= '0;
+            out     <= '0;
+            done    <= 1'b0;
+        end else begin
+            done <= 1'b0;
+
+            if (!busy && go) begin
+                saved_x <= x;
+
+                if (LATENCY == 1) begin
+                    out  <= x + 32'd{add_const};
+                    done <= 1'b1;
+                    busy <= 1'b0;
+                end else begin
+                    busy  <= 1'b1;
+                    count <= COUNT_W'(LATENCY - 1);
+                end
+            end else if (busy) begin
+                if (count == 1) begin
+                    out   <= saved_x + 32'd{add_const};
+                    done  <= 1'b1;
+                    busy  <= 1'b0;
+                    count <= '0;
+                end else begin
+                    count <= count - 1'b1;
+                end
+            end
+        end
+    end
+
+endmodule
+'''
+
+
+_TOY_KERNELS = {
+    "kernel_a": {
+        "module": "kernel_a_li",
+        "add_const": 1,
+    },
+    "kernel_b": {
+        "module": "kernel_b_li",
+        "add_const": 2,
+    },
+}
+
+
+def elaborate_toy_generators(
+    program: SymbolicProgram,
+    config: ToyGeneratorConfig,
+    rtl_output: Path,
+) -> ElaborationResult:
+    """
+    Elaborate all toy-generator declarations in a symbolic program.
+
+    All declarations/configuration are validated before RTL is written.
+    The current toy backend emits both logical kernels into one shared
+    SystemVerilog artifact.
+    """
+
+    planned = []
+
+    for decl in program.generators:
+        if decl.generator != "toy_generator":
+            raise GeneratorElaborationError(
+                "Toy elaborator cannot handle generator "
+                f"{decl.generator!r} for instance {decl.instance}."
+            )
+
+        try:
+            spec = _TOY_KERNELS[decl.kernel]
+        except KeyError as exc:
+            raise GeneratorElaborationError(
+                f"Unsupported toy kernel: {decl.kernel}"
+            ) from exc
+
+        latency = config.latency_for(
+            decl.instance
+        )
+
+        planned.append(
+            (
+                decl,
+                latency,
+                spec["module"],
+                spec["add_const"],
+            )
+        )
+
+    if not planned:
+        raise GeneratorElaborationError(
+            "Program contains no toy generators to elaborate."
+        )
+
+    rtl_text = "\n".join(
+        _toy_sv_kernel(
+            module=module,
+            cycles=latency,
+            add_const=add_const,
+        )
+        for _, latency, module, add_const in planned
+    )
+
+    rtl_output.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    rtl_output.write_text(rtl_text)
+
+    sha256 = hashlib.sha256(
+        rtl_output.read_bytes()
+    ).hexdigest()
+
+    results = tuple(
+        GeneratorResult(
+            instance=decl.instance,
+            generator=decl.generator,
+            kernel=decl.kernel,
+            latency_var=decl.latency_var.name,
+            latency=latency,
+            rtl=RTLArtifact(
+                path=str(rtl_output),
+                module=module,
+                sha256=sha256,
+            ),
+        )
+        for decl, latency, module, _ in planned
+    )
+
+    return ElaborationResult(
+        generators=results,
+    )

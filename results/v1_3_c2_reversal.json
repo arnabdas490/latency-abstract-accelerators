@@ -1,0 +1,27 @@
+{
+  "calyx_emitted": false,
+  "compiler_accepted": false,
+  "configuration": "C2",
+  "constraint_failures": [
+    {
+      "left_value": 10,
+      "name": "total_deadline",
+      "op": "<=",
+      "right_value": 8
+    }
+  ],
+  "generator_latencies": {
+    "A": 5,
+    "B": 2
+  },
+  "resolved_structural_timing": {
+    "L_A": 5,
+    "L_B": 2,
+    "T_pair": 5,
+    "T_tail": 5,
+    "T_total": 10
+  },
+  "rtl_emitted": true,
+  "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+  "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+}

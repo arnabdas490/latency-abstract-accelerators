@@ -181,23 +181,129 @@ class StaticPar:
     """
     A statically composed parallel region.
 
-    At the symbolic stage, its exact duration may still be unresolved.
+    The region latency is inferred as the maximum latency of its
+    invokes. If timing_var is present, the resolver may bind that
+    variable to the inferred region latency.
     """
 
     invokes: tuple[Invoke, ...]
+    timing_var: TimingVar | None = None
 
     def __post_init__(self) -> None:
         if not self.invokes:
-            raise ValueError("Static parallel region cannot be empty.")
+            raise ValueError(
+                "Static parallel region cannot be empty."
+            )
 
     def to_dict(self) -> dict:
-        return {
+        data = {
             "kind": "static_par",
             "invokes": [
                 invoke.to_dict()
                 for invoke in self.invokes
             ],
         }
+
+        # Preserve the exact V1.0 representation when no structural
+        # timing variable is requested.
+        if self.timing_var is not None:
+            data["timing_var"] = (
+                self.timing_var.to_dict()
+            )
+
+        return data
+
+
+@dataclass(frozen=True)
+class StaticSeq:
+    """
+    A statically composed sequential region.
+
+    Its latency will be inferred structurally as the sum of the
+    latencies of its steps.
+    """
+
+    steps: tuple[Invoke | StaticPar | StaticSeq, ...]
+    timing_var: TimingVar | None = None
+
+    def __post_init__(self) -> None:
+        if not self.steps:
+            raise ValueError(
+                "Static sequential region cannot be empty."
+            )
+
+    def to_dict(self) -> dict:
+        data = {
+            "kind": "static_seq",
+            "steps": [
+                step.to_dict()
+                for step in self.steps
+            ],
+        }
+
+        if self.timing_var is not None:
+            data["timing_var"] = (
+                self.timing_var.to_dict()
+            )
+
+        return data
+
+
+def _iter_control_invokes(
+    control: Invoke | StaticPar | StaticSeq,
+):
+    """Yield all Invoke nodes nested in symbolic static control."""
+
+    if isinstance(control, Invoke):
+        yield control
+        return
+
+    if isinstance(control, StaticPar):
+        yield from control.invokes
+        return
+
+    if isinstance(control, StaticSeq):
+        for step in control.steps:
+            yield from _iter_control_invokes(
+                step
+            )
+        return
+
+    raise TypeError(
+        "Unsupported symbolic control node: "
+        f"{type(control).__name__}"
+    )
+
+
+def _iter_control_timing_vars(
+    control: Invoke | StaticPar | StaticSeq,
+):
+    """Yield timing variables produced by structural control regions."""
+
+    if isinstance(control, Invoke):
+        return
+
+    if isinstance(control, StaticPar):
+        if control.timing_var is not None:
+            yield control.timing_var
+
+        return
+
+    if isinstance(control, StaticSeq):
+        if control.timing_var is not None:
+            yield control.timing_var
+
+        for step in control.steps:
+            yield from _iter_control_timing_vars(
+                step
+            )
+
+        return
+
+    raise TypeError(
+        "Unsupported symbolic control node: "
+        f"{type(control).__name__}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +320,7 @@ class SymbolicProgram:
     generators: tuple[GeneratorDecl, ...]
     bindings: tuple[TimingBinding, ...]
     constraints: tuple[TimingConstraint, ...]
-    body: StaticPar
+    body: StaticPar | StaticSeq
 
     def __post_init__(self) -> None:
         generator_names = [
@@ -235,12 +341,53 @@ class SymbolicProgram:
 
         declared = set(generator_names)
 
-        for invoke in self.body.invokes:
+        for invoke in _iter_control_invokes(
+            self.body
+        ):
             if invoke.component not in declared:
                 raise ValueError(
                     "Invoke references undeclared component: "
                     f"{invoke.component}"
                 )
+
+        generator_latency_names = {
+            generator.latency_var.name
+            for generator in self.generators
+        }
+
+        region_timing_names = [
+            var.name
+            for var in _iter_control_timing_vars(
+                self.body
+            )
+        ]
+
+        if (
+            len(region_timing_names)
+            != len(set(region_timing_names))
+        ):
+            raise ValueError(
+                "Control-region timing variables must be unique."
+            )
+
+        reserved_names = (
+            generator_latency_names
+            | set(binding_names)
+        )
+
+        collisions = (
+            reserved_names
+            & set(region_timing_names)
+        )
+
+        if collisions:
+            raise ValueError(
+                "Control-region timing variables collide with "
+                "existing timing variables: "
+                + ", ".join(
+                    sorted(collisions)
+                )
+            )
 
     def to_dict(self) -> dict:
         """

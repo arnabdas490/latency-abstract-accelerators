@@ -1,0 +1,118 @@
+{
+  "all_source_hashes_identical": true,
+  "all_symbolic_ir_hashes_identical": true,
+  "bindings": 0,
+  "claim": "C1-C5 use one unchanged latency-abstract source and one unchanged symbolic IR.",
+  "configurations": [
+    {
+      "bindings": 0,
+      "compiler_accepted": true,
+      "configuration": "C1",
+      "constraint_failures": [],
+      "generator_latencies": {
+        "A": 2,
+        "B": 5
+      },
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942",
+      "timing": {
+        "T_pair": 5,
+        "T_tail": 2,
+        "T_total": 7
+      }
+    },
+    {
+      "bindings": 0,
+      "compiler_accepted": false,
+      "configuration": "C2",
+      "constraint_failures": [
+        {
+          "left_value": 10,
+          "name": "total_deadline",
+          "op": "<=",
+          "right_value": 8
+        }
+      ],
+      "generator_latencies": {
+        "A": 5,
+        "B": 2
+      },
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942",
+      "timing": {
+        "T_pair": 5,
+        "T_tail": 5,
+        "T_total": 10
+      }
+    },
+    {
+      "bindings": 0,
+      "compiler_accepted": true,
+      "configuration": "C3",
+      "constraint_failures": [],
+      "generator_latencies": {
+        "A": 3,
+        "B": 3
+      },
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942",
+      "timing": {
+        "T_pair": 3,
+        "T_tail": 3,
+        "T_total": 6
+      }
+    },
+    {
+      "bindings": 0,
+      "compiler_accepted": false,
+      "configuration": "C4",
+      "constraint_failures": [
+        {
+          "left_value": 11,
+          "name": "total_deadline",
+          "op": "<=",
+          "right_value": 8
+        }
+      ],
+      "generator_latencies": {
+        "A": 4,
+        "B": 7
+      },
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942",
+      "timing": {
+        "T_pair": 7,
+        "T_tail": 4,
+        "T_total": 11
+      }
+    },
+    {
+      "bindings": 0,
+      "compiler_accepted": false,
+      "configuration": "C5",
+      "constraint_failures": [
+        {
+          "left_value": 16,
+          "name": "total_deadline",
+          "op": "<=",
+          "right_value": 8
+        }
+      ],
+      "generator_latencies": {
+        "A": 8,
+        "B": 3
+      },
+      "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+      "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942",
+      "timing": {
+        "T_pair": 8,
+        "T_tail": 8,
+        "T_total": 16
+      }
+    }
+  ],
+  "matches_frozen_manifest": true,
+  "source": "examples/v1_3_components.lair",
+  "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+  "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+}

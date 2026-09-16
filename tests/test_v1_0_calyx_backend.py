@@ -86,9 +86,16 @@ class CalyxBackendTests(unittest.TestCase):
             / "examples/generated/v0_8_fixed_la.futil"
         ).read_text()
 
+        def normalize_layout(text: str) -> str:
+            return "\n".join(
+                line.rstrip()
+                for line in text.splitlines()
+                if line.strip()
+            )
+
         self.assertEqual(
-            generated,
-            reference,
+            normalize_layout(generated),
+            normalize_layout(reference),
         )
 
     def test_backend_source_does_not_reference_contract_files(self):

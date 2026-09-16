@@ -401,4 +401,3 @@ def timing_environment_from_elaboration(
             for result in elaboration.generators
         }
     )
-

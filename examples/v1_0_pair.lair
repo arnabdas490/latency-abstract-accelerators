@@ -1,0 +1,20 @@
+# V1.0 latency-abstract pair example.
+#
+# Generator latency is intentionally absent from this source.
+# L_A and L_B become concrete only during elaboration.
+
+generator A = toy_generator(kernel_a) latency -> L_A
+generator B = toy_generator(kernel_b) latency -> L_B
+
+let T = max(L_A, L_B)
+
+require positive_latency_a: L_A >= 1
+require positive_latency_b: L_B >= 1
+require parallel_deadline: T <= 6
+
+component pair(x) {
+    static par {
+        invoke A(x)
+        invoke B(x)
+    }
+}

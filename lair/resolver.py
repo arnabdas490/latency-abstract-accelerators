@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from lair.ast import (
+    ComponentDecl,
     Invoke,
     StaticPar,
     StaticSeq,
@@ -14,6 +15,9 @@ from lair.ast import (
     TimingVar,
 )
 from lair.environment import TimingEnvironment
+from lair.component_timing import (
+    ComponentTimingInterface,
+)
 
 
 class ResolutionError(Exception):
@@ -375,6 +379,173 @@ def resolve_control(
     raise TypeError(
         "Unsupported symbolic control node: "
         f"{type(control).__name__}"
+    )
+
+
+
+@dataclass(frozen=True)
+class ResolvedComponent:
+    """
+    A resolved reusable user component.
+
+    This object may retain implementation structure for lowering and
+    debugging. Parents must not consume this object for timing; they
+    consume only ComponentTimingInterface.
+    """
+
+    name: str
+    args: tuple[str, ...]
+    latency: int
+    body: (
+        ResolvedStaticPar
+        | ResolvedStaticSeq
+    )
+    timing_values: dict[str, int]
+
+    def timing_interface(
+        self,
+    ) -> ComponentTimingInterface:
+        return ComponentTimingInterface(
+            component=self.name,
+            latency=self.latency,
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "args": list(self.args),
+            "latency": self.latency,
+            "timing_values": dict(
+                self.timing_values
+            ),
+            "body": self.body.to_dict(),
+        }
+
+
+def resolve_component_control(
+    control: StaticPar | StaticSeq,
+    *,
+    generator_latencies: dict[str, int],
+    component_interfaces: dict[
+        str,
+        ComponentTimingInterface,
+    ],
+) -> tuple[
+    ResolvedStaticPar | ResolvedStaticSeq,
+    dict[str, int],
+]:
+    """
+    Resolve one component body from only the timing facts visible at
+    that component boundary.
+
+    Generator leaves are supplied explicitly through generator_latencies.
+
+    User-component calls are supplied only through
+    ComponentTimingInterface objects.
+
+    A fresh local timing namespace is used for structural timing facts;
+    no global TimingEnvironment is visible here.
+    """
+
+    available: dict[str, int] = dict(
+        generator_latencies
+    )
+
+    for name, interface in (
+        component_interfaces.items()
+    ):
+        if name != interface.component:
+            raise ResolutionError(
+                "Component timing interface key/name mismatch: "
+                f"{name} != {interface.component}"
+            )
+
+        if name in available:
+            raise ResolutionError(
+                "Timing source supplied as both generator "
+                "and component interface: "
+                f"{name}"
+            )
+
+        available[name] = interface.latency
+
+    local_values: dict[str, int] = {}
+
+    resolved = resolve_control(
+        control,
+        available,
+        local_values,
+    )
+
+    if not isinstance(
+        resolved,
+        (
+            ResolvedStaticPar,
+            ResolvedStaticSeq,
+        ),
+    ):
+        raise ResolutionError(
+            "Component body must resolve to static "
+            "parallel or sequential control."
+        )
+
+    return (
+        resolved,
+        local_values,
+    )
+
+
+def resolve_component_decl(
+    component: ComponentDecl,
+    *,
+    generator_latencies: dict[str, int],
+    component_interfaces: dict[
+        str,
+        ComponentTimingInterface,
+    ],
+) -> ResolvedComponent:
+    """
+    Resolve one reusable component and construct its concrete timing
+    result without exposing its body through the public timing interface.
+    """
+
+    resolved_body, local_values = (
+        resolve_component_control(
+            component.body,
+            generator_latencies=(
+                generator_latencies
+            ),
+            component_interfaces=(
+                component_interfaces
+            ),
+        )
+    )
+
+    export_name = (
+        component.latency_var.name
+    )
+
+    if export_name in local_values:
+        raise ResolutionError(
+            "Component timing export was already "
+            "derived internally: "
+            f"{export_name}"
+        )
+
+    component_values = dict(
+        local_values
+    )
+
+    component_values[
+        export_name
+    ] = resolved_body.latency
+
+    return ResolvedComponent(
+        name=component.name,
+        args=component.args,
+        latency=resolved_body.latency,
+        body=resolved_body,
+        timing_values=component_values,
     )
 
 

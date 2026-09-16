@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from lair.ast import (
+    ComponentDecl,
     GeneratorDecl,
     Invoke,
     StaticPar,
@@ -310,33 +311,32 @@ def parse_lair(text: str) -> SymbolicProgram:
     """
     Parse textual latency-abstract accelerator IR.
 
-    Supported top-level declarations:
-
-        generator A = toy_generator(kernel_a) latency -> L_A
-        let T = max(L_A, L_B)
-        require name: T <= 6
-
-    V1.0 control remains valid:
-
-        component pair(x) {
-            static par {
-                invoke A(x)
-                invoke B(x)
-            }
-        }
-
-    V1.2 adds hierarchical static control with optional
-    compiler-derived timing names:
+    Legacy V1.0-V1.2 programs contain exactly one top-level component:
 
         component pipeline(x) {
             static seq -> T_total {
-                static par -> T_pair {
-                    invoke A(x)
-                    invoke B(x)
-                }
-                invoke A(x)
+                ...
             }
         }
+
+    V1.3 adds reusable component declarations with exported timing
+    interfaces plus an explicit entry component:
+
+        component pair(x) latency -> T_pair {
+            static par {
+                ...
+            }
+        }
+
+        component pipeline(x) latency -> T_total {
+            static seq {
+                invoke pair(x)
+            }
+        }
+
+        entry pipeline
+
+    Legacy and V1.3 component forms may not be mixed.
     """
 
     lines = _clean_lines(
@@ -347,8 +347,12 @@ def parse_lair(text: str) -> SymbolicProgram:
     bindings = []
     constraints = []
 
-    body = None
-    component_seen = False
+    legacy_body = None
+    components = []
+    entry = None
+
+    component_section_started = False
+    legacy_component_seen = False
 
     i = 0
 
@@ -363,10 +367,9 @@ def parse_lair(text: str) -> SymbolicProgram:
         )
 
         if generator_match:
-            if component_seen:
+            if component_section_started:
                 raise ParseError(
-                    "Generator declaration appears "
-                    "after component."
+                    "Generator declaration appears after component."
                 )
 
             (
@@ -396,10 +399,9 @@ def parse_lair(text: str) -> SymbolicProgram:
         )
 
         if binding_match:
-            if component_seen:
+            if component_section_started:
                 raise ParseError(
-                    "Timing binding appears "
-                    "after component."
+                    "Timing binding appears after component."
                 )
 
             target, expr_text = (
@@ -426,10 +428,9 @@ def parse_lair(text: str) -> SymbolicProgram:
         )
 
         if constraint_match:
-            if component_seen:
+            if component_section_started:
                 raise ParseError(
-                    "Constraint appears "
-                    "after component."
+                    "Constraint appears after component."
                 )
 
             name, constraint_text = (
@@ -458,22 +459,95 @@ def parse_lair(text: str) -> SymbolicProgram:
             i += 1
             continue
 
+        # ---------------------------------------------------------------
+        # V1.3 reusable component declaration.
+        # ---------------------------------------------------------------
         component_match = re.fullmatch(
+            rf"component\s+({IDENT})"
+            rf"\s*\(\s*({IDENT})\s*\)"
+            rf"\s+latency\s*->\s*({IDENT})"
+            rf"\s*\{{",
+            line,
+        )
+
+        if component_match:
+            if legacy_component_seen:
+                raise ParseError(
+                    "Legacy and V1.3 component forms cannot be mixed."
+                )
+
+            if entry is not None:
+                raise ParseError(
+                    "Component declaration appears after entry."
+                )
+
+            component_section_started = True
+
+            (
+                component_name,
+                argument,
+                latency_name,
+            ) = component_match.groups()
+
+            body, i = _parse_control(
+                lines,
+                i + 1,
+            )
+
+            if (
+                i >= len(lines)
+                or lines[i] != "}"
+            ):
+                raise ParseError(
+                    "Expected component closing brace."
+                )
+
+            components.append(
+                ComponentDecl(
+                    name=component_name,
+                    args=(
+                        argument,
+                    ),
+                    latency_var=TimingVar(
+                        latency_name
+                    ),
+                    body=body,
+                )
+            )
+
+            i += 1
+            continue
+
+        # ---------------------------------------------------------------
+        # Historical V1.0-V1.2 single-component form.
+        # ---------------------------------------------------------------
+        legacy_match = re.fullmatch(
             rf"component\s+({IDENT})"
             rf"\s*\(\s*({IDENT})\s*\)\s*\{{",
             line,
         )
 
-        if component_match:
-            if component_seen:
+        if legacy_match:
+            if components:
                 raise ParseError(
-                    "Only one top-level component "
-                    "is currently supported."
+                    "Legacy and V1.3 component forms cannot be mixed."
                 )
 
-            component_seen = True
+            if legacy_component_seen:
+                raise ParseError(
+                    "Only one legacy top-level component "
+                    "is supported."
+                )
 
-            body, i = _parse_control(
+            if entry is not None:
+                raise ParseError(
+                    "Legacy component appears after entry."
+                )
+
+            component_section_started = True
+            legacy_component_seen = True
+
+            legacy_body, i = _parse_control(
                 lines,
                 i + 1,
             )
@@ -490,39 +564,106 @@ def parse_lair(text: str) -> SymbolicProgram:
 
             if i != len(lines):
                 raise ParseError(
-                    "Unexpected content after component: "
+                    "Unexpected content after legacy component: "
                     f"{lines[i]}"
                 )
 
-            break
+            continue
+
+        # ---------------------------------------------------------------
+        # V1.3 entry declaration.
+        # ---------------------------------------------------------------
+        entry_match = re.fullmatch(
+            rf"entry\s+({IDENT})",
+            line,
+        )
+
+        if entry_match:
+            if legacy_component_seen:
+                raise ParseError(
+                    "Legacy component programs cannot define entry."
+                )
+
+            if not components:
+                raise ParseError(
+                    "Entry declaration appears before any "
+                    "V1.3 component."
+                )
+
+            if entry is not None:
+                raise ParseError(
+                    "Program defines more than one entry."
+                )
+
+            entry = entry_match.group(1)
+            component_section_started = True
+
+            i += 1
+
+            if i != len(lines):
+                raise ParseError(
+                    "Unexpected content after entry: "
+                    f"{lines[i]}"
+                )
+
+            continue
 
         raise ParseError(
             f"Unexpected top-level statement: {line}"
         )
 
-    if not component_seen:
-        raise ParseError(
-            "Program contains no component."
+    # -------------------------------------------------------------------
+    # Construct exactly one of the two symbolic-program representations.
+    # -------------------------------------------------------------------
+    if legacy_component_seen:
+        if legacy_body is None:
+            raise ParseError(
+                "Program contains no static control body."
+            )
+
+        return SymbolicProgram(
+            generators=tuple(
+                generators
+            ),
+            bindings=tuple(
+                bindings
+            ),
+            constraints=tuple(
+                constraints
+            ),
+            body=legacy_body,
         )
 
-    if body is None:
-        raise ParseError(
-            "Program contains no static control body."
-        )
+    if components:
+        if entry is None:
+            raise ParseError(
+                "V1.3 component program contains no entry."
+            )
 
-    return SymbolicProgram(
-        generators=tuple(
-            generators
-        ),
-        bindings=tuple(
-            bindings
-        ),
-        constraints=tuple(
-            constraints
-        ),
-        body=body,
+        try:
+            return SymbolicProgram(
+                generators=tuple(
+                    generators
+                ),
+                bindings=tuple(
+                    bindings
+                ),
+                constraints=tuple(
+                    constraints
+                ),
+                components=tuple(
+                    components
+                ),
+                entry=entry,
+            )
+        except ValueError as exc:
+            raise ParseError(
+                str(exc)
+            ) from exc
+
+    raise ParseError(
+        "Program contains no component."
     )
-
 
 def parse_lair_file(path: Path) -> SymbolicProgram:
     return parse_lair(

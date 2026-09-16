@@ -13,10 +13,14 @@ from lair.ast import (
     TimingExpr,
     TimingMax,
     TimingVar,
+    _iter_control_invokes,
 )
 from lair.environment import TimingEnvironment
 from lair.component_timing import (
     ComponentTimingInterface,
+)
+from lair.component_graph import (
+    topological_component_order,
 )
 
 
@@ -684,4 +688,314 @@ def resolve_program(
         bindings=tuple(resolved_bindings),
         constraint_checks=checks,
         body=resolved_body,
+    )
+
+
+@dataclass(frozen=True)
+class ResolvedComponentProgram:
+    """
+    Fully resolved V1.3 reusable-component program.
+
+    Program-level timing_values contain generator-produced facts,
+    component timing exports, and explicit top-level bindings.
+
+    Internal component timing facts remain encapsulated inside each
+    ResolvedComponent.
+    """
+
+    timing_values: dict[str, int]
+    generators: tuple[ResolvedGenerator, ...]
+    bindings: tuple[ResolvedTimingBinding, ...]
+    constraint_checks: tuple[ConstraintCheck, ...]
+    components: tuple[ResolvedComponent, ...]
+    entry: str
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": "resolved_component_program",
+            "timing_values": dict(
+                self.timing_values
+            ),
+            "generators": [
+                generator.to_dict()
+                for generator
+                in self.generators
+            ],
+            "bindings": [
+                binding.to_dict()
+                for binding
+                in self.bindings
+            ],
+            "constraint_checks": [
+                check.to_dict()
+                for check
+                in self.constraint_checks
+            ],
+            "components": [
+                component.to_dict()
+                for component
+                in self.components
+            ],
+            "entry": self.entry,
+        }
+
+
+def resolve_component_program(
+    program: SymbolicProgram,
+    environment: TimingEnvironment,
+) -> ResolvedComponentProgram:
+    """
+    Resolve a V1.3 reusable-component program bottom-up.
+
+    Each component receives only:
+      * directly invoked generator latencies, and
+      * directly invoked child ComponentTimingInterface objects.
+
+    Parents therefore do not receive descendant implementations or
+    unrelated generator timing facts.
+
+    After component resolution, exported component timings are combined
+    with generator timing facts in the program-level namespace for
+    top-level bindings and constraints.
+    """
+
+    if not program.components:
+        raise ResolutionError(
+            "Expected a V1.3 component program."
+        )
+
+    if program.entry is None:
+        raise ResolutionError(
+            "V1.3 component program has no entry."
+        )
+
+    environment_values = (
+        environment.to_dict()
+    )
+
+    generator_latencies: dict[
+        str,
+        int,
+    ] = {}
+
+    for generator in program.generators:
+        variable = (
+            generator.latency_var.name
+        )
+
+        try:
+            latency = (
+                environment_values[
+                    variable
+                ]
+            )
+        except KeyError as exc:
+            raise UnboundTimingVariable(
+                variable
+            ) from exc
+
+        generator_latencies[
+            generator.instance
+        ] = latency
+
+    generator_names = set(
+        generator_latencies
+    )
+
+    component_by_name = {
+        component.name: component
+        for component
+        in program.components
+    }
+
+    component_names = set(
+        component_by_name
+    )
+
+    interfaces: dict[
+        str,
+        ComponentTimingInterface,
+    ] = {}
+
+    resolved_components: list[
+        ResolvedComponent
+    ] = []
+
+    for component_name in (
+        topological_component_order(
+            program
+        )
+    ):
+        component = (
+            component_by_name[
+                component_name
+            ]
+        )
+
+        targets = tuple(
+            invoke.component
+            for invoke
+            in _iter_control_invokes(
+                component.body
+            )
+        )
+
+        direct_generator_latencies = {
+            target:
+            generator_latencies[
+                target
+            ]
+            for target in targets
+            if target
+            in generator_names
+        }
+
+        direct_component_interfaces = {
+            target:
+            interfaces[
+                target
+            ]
+            for target in targets
+            if target
+            in component_names
+        }
+
+        resolved_component = (
+            resolve_component_decl(
+                component,
+                generator_latencies=(
+                    direct_generator_latencies
+                ),
+                component_interfaces=(
+                    direct_component_interfaces
+                ),
+            )
+        )
+
+        resolved_components.append(
+            resolved_component
+        )
+
+        interfaces[
+            component_name
+        ] = (
+            resolved_component
+            .timing_interface()
+        )
+
+    # ---------------------------------------------------------------
+    # Program-level namespace.
+    #
+    # This namespace may see generator timing facts and PUBLIC component
+    # exports. It deliberately does not receive component-local timing.
+    # ---------------------------------------------------------------
+    values = dict(
+        environment_values
+    )
+
+    for resolved_component in (
+        resolved_components
+    ):
+        declaration = (
+            component_by_name[
+                resolved_component.name
+            ]
+        )
+
+        export_name = (
+            declaration
+            .latency_var
+            .name
+        )
+
+        if export_name in values:
+            raise ResolutionError(
+                "Component timing export was already "
+                "supplied at program scope: "
+                f"{export_name}"
+            )
+
+        values[
+            export_name
+        ] = (
+            resolved_component.latency
+        )
+
+    resolved_bindings = []
+
+    for binding in program.bindings:
+        target = (
+            binding.target.name
+        )
+
+        if target in values:
+            raise ResolutionError(
+                "Derived timing variable was already "
+                "supplied or inferred: "
+                f"{target}"
+            )
+
+        value = evaluate_expr(
+            binding.expr,
+            values,
+        )
+
+        values[
+            target
+        ] = value
+
+        resolved_bindings.append(
+            ResolvedTimingBinding(
+                name=target,
+                value=value,
+            )
+        )
+
+    checks = tuple(
+        evaluate_constraint(
+            constraint,
+            values,
+        )
+        for constraint
+        in program.constraints
+    )
+
+    if not all(
+        check.passed
+        for check
+        in checks
+    ):
+        raise ConstraintViolation(
+            checks
+        )
+
+    resolved_generators = tuple(
+        ResolvedGenerator(
+            instance=generator.instance,
+            generator=generator.generator,
+            kernel=generator.kernel,
+            latency_var=(
+                generator.latency_var.name
+            ),
+            latency=generator_latencies[
+                generator.instance
+            ],
+        )
+        for generator
+        in program.generators
+    )
+
+    return ResolvedComponentProgram(
+        timing_values=dict(
+            values
+        ),
+        generators=resolved_generators,
+        bindings=tuple(
+            resolved_bindings
+        ),
+        constraint_checks=checks,
+        components=tuple(
+            resolved_components
+        ),
+        entry=program.entry,
     )

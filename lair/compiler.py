@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
+from lair.ast import SymbolicProgram
 from lair.calyx_backend import write_resolved_program_calyx
 from lair.environment import TimingEnvironment
 from lair.generator_elaboration import (
@@ -14,7 +15,9 @@ from lair.generator_elaboration import (
 )
 from lair.parser import parse_lair_file
 from lair.resolver import (
+    ResolvedComponentProgram,
     ResolvedProgram,
+    resolve_component_program,
     resolve_program,
 )
 
@@ -37,8 +40,96 @@ class CompilationResult:
     calyx_output: Path
     elaboration: ElaborationResult
     timing_environment: TimingEnvironment
-    resolved: ResolvedProgram
+    resolved: (
+        ResolvedProgram
+        | ResolvedComponentProgram
+    )
     extern_rtl: str
+
+
+
+@dataclass(frozen=True)
+class TimingCompilationResult:
+    """
+    Compilation state after parsing, generator elaboration, timing
+    resolution, and constraint checking, but before backend lowering.
+    """
+
+    source: Path
+    rtl_output: Path
+    elaboration: ElaborationResult
+    timing_environment: TimingEnvironment
+    resolved: (
+        ResolvedProgram
+        | ResolvedComponentProgram
+    )
+
+
+def resolve_symbolic_program(
+    symbolic: SymbolicProgram,
+    environment: TimingEnvironment,
+) -> (
+    ResolvedProgram
+    | ResolvedComponentProgram
+):
+    """
+    Select the timing-resolution path without weakening historical
+    V1.0-V1.2 behavior.
+    """
+
+    if symbolic.components:
+        return resolve_component_program(
+            symbolic,
+            environment,
+        )
+
+    return resolve_program(
+        symbolic,
+        environment,
+    )
+
+
+def compile_lair_to_resolved(
+    source: Path,
+    config: ToyGeneratorConfig,
+    *,
+    rtl_output: Path,
+) -> TimingCompilationResult:
+    """
+    Run LAIR through the complete frontend/timing pipeline while
+    deliberately stopping before Calyx lowering.
+
+    This stage is useful independently of backend support.
+    """
+
+    symbolic = parse_lair_file(
+        source
+    )
+
+    elaboration = elaborate_toy_generators(
+        symbolic,
+        config,
+        rtl_output,
+    )
+
+    environment = (
+        timing_environment_from_elaboration(
+            elaboration
+        )
+    )
+
+    resolved = resolve_symbolic_program(
+        symbolic,
+        environment,
+    )
+
+    return TimingCompilationResult(
+        source=source,
+        rtl_output=rtl_output,
+        elaboration=elaboration,
+        timing_environment=environment,
+        resolved=resolved,
+    )
 
 
 def compile_lair_file(
@@ -86,7 +177,7 @@ def compile_lair_file(
     )
 
     # 4. Symbolic timing resolution + constraint checking.
-    resolved = resolve_program(
+    resolved = resolve_symbolic_program(
         symbolic,
         environment,
     )

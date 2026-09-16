@@ -307,6 +307,52 @@ def _iter_control_timing_vars(
 
 
 # ---------------------------------------------------------------------------
+# Reusable user components
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ComponentDecl:
+    """
+    Declares a reusable latency-abstract user component.
+
+    The exported latency variable names the inferred latency of the
+    component body. Its concrete value is intentionally absent from
+    the symbolic IR.
+    """
+
+    name: str
+    args: tuple[str, ...]
+    latency_var: TimingVar
+    body: StaticPar | StaticSeq
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError(
+                "Component name must be non-empty."
+            )
+
+        if any(
+            not arg
+            for arg in self.args
+        ):
+            raise ValueError(
+                "Component argument names must be non-empty."
+            )
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": "component_decl",
+            "name": self.name,
+            "args": list(self.args),
+            "latency_var": (
+                self.latency_var.to_dict()
+            ),
+            "body": self.body.to_dict(),
+        }
+
+
+# ---------------------------------------------------------------------------
 # Symbolic program
 # ---------------------------------------------------------------------------
 
@@ -315,12 +361,21 @@ def _iter_control_timing_vars(
 class SymbolicProgram:
     """
     Complete latency-abstract program before generator timing is known.
+
+    Legacy V1.0-V1.2 programs use `body`.
+
+    V1.3 component-based programs use `components` + `entry`.
+
+    The two representations are intentionally serialized differently so
+    historical canonical IR remains unchanged.
     """
 
     generators: tuple[GeneratorDecl, ...]
     bindings: tuple[TimingBinding, ...]
     constraints: tuple[TimingConstraint, ...]
-    body: StaticPar | StaticSeq
+    body: StaticPar | StaticSeq | None = None
+    components: tuple[ComponentDecl, ...] = ()
+    entry: str | None = None
 
     def __post_init__(self) -> None:
         generator_names = [
@@ -328,66 +383,127 @@ class SymbolicProgram:
             for generator in self.generators
         ]
 
-        if len(generator_names) != len(set(generator_names)):
-            raise ValueError("Generator instance names must be unique.")
+        if (
+            len(generator_names)
+            != len(set(generator_names))
+        ):
+            raise ValueError(
+                "Generator instance names must be unique."
+            )
 
         binding_names = [
             binding.target.name
             for binding in self.bindings
         ]
 
-        if len(binding_names) != len(set(binding_names)):
-            raise ValueError("Timing binding targets must be unique.")
-
-        declared = set(generator_names)
-
-        for invoke in _iter_control_invokes(
-            self.body
+        if (
+            len(binding_names)
+            != len(set(binding_names))
         ):
-            if invoke.component not in declared:
-                raise ValueError(
-                    "Invoke references undeclared component: "
-                    f"{invoke.component}"
-                )
-
-        generator_latency_names = {
-            generator.latency_var.name
-            for generator in self.generators
-        }
-
-        region_timing_names = [
-            var.name
-            for var in _iter_control_timing_vars(
-                self.body
+            raise ValueError(
+                "Timing binding targets must be unique."
             )
-        ]
+
+        # Structural representation invariant only.
+        #
+        # Detailed V1.3 namespace, dependency, invocation, timing-name,
+        # and recursion validation belongs to the dedicated component
+        # validation stages added after this AST checkpoint.
+        if (
+            self.body is not None
+            and self.components
+        ):
+            raise ValueError(
+                "SymbolicProgram cannot contain both a legacy body "
+                "and V1.3 component declarations."
+            )
 
         if (
-            len(region_timing_names)
-            != len(set(region_timing_names))
+            self.body is None
+            and not self.components
         ):
             raise ValueError(
-                "Control-region timing variables must be unique."
+                "SymbolicProgram requires either a legacy body "
+                "or V1.3 component declarations."
             )
 
-        reserved_names = (
-            generator_latency_names
-            | set(binding_names)
-        )
-
-        collisions = (
-            reserved_names
-            & set(region_timing_names)
-        )
-
-        if collisions:
+        if (
+            self.components
+            and self.entry is None
+        ):
             raise ValueError(
-                "Control-region timing variables collide with "
-                "existing timing variables: "
-                + ", ".join(
-                    sorted(collisions)
-                )
+                "Component-based SymbolicProgram requires an entry."
             )
+
+        if (
+            self.body is not None
+            and self.entry is not None
+        ):
+            raise ValueError(
+                "Legacy SymbolicProgram body cannot define "
+                "a V1.3 entry component."
+            )
+
+        # Preserve all historical V1.0-V1.2 validation exactly for the
+        # legacy single-body representation.
+        if self.body is not None:
+            declared = set(
+                generator_names
+            )
+
+            for invoke in _iter_control_invokes(
+                self.body
+            ):
+                if (
+                    invoke.component
+                    not in declared
+                ):
+                    raise ValueError(
+                        "Invoke references undeclared component: "
+                        f"{invoke.component}"
+                    )
+
+            generator_latency_names = {
+                generator.latency_var.name
+                for generator in self.generators
+            }
+
+            region_timing_names = [
+                var.name
+                for var
+                in _iter_control_timing_vars(
+                    self.body
+                )
+            ]
+
+            if (
+                len(region_timing_names)
+                != len(
+                    set(region_timing_names)
+                )
+            ):
+                raise ValueError(
+                    "Control-region timing variables must be unique."
+                )
+
+            reserved_names = (
+                generator_latency_names
+                | set(binding_names)
+            )
+
+            collisions = (
+                reserved_names
+                & set(region_timing_names)
+            )
+
+            if collisions:
+                raise ValueError(
+                    "Control-region timing variables collide with "
+                    "existing timing variables: "
+                    + ", ".join(
+                        sorted(collisions)
+                    )
+                )
 
     def to_dict(self) -> dict:
         """
@@ -395,9 +511,13 @@ class SymbolicProgram:
 
         Concrete generator timing cannot appear here unless somebody
         explicitly encoded it as a TimingConst in the source IR.
+
+        V1.3-only fields are omitted from legacy programs so historical
+        canonical serialization remains byte-for-byte compatible after
+        canonical JSON encoding.
         """
 
-        return {
+        data = {
             "kind": "symbolic_program",
             "generators": [
                 generator.to_dict()
@@ -411,5 +531,21 @@ class SymbolicProgram:
                 constraint.to_dict()
                 for constraint in self.constraints
             ],
-            "body": self.body.to_dict(),
         }
+
+        if self.body is not None:
+            data["body"] = (
+                self.body.to_dict()
+            )
+
+        if self.components:
+            data["components"] = [
+                component.to_dict()
+                for component
+                in self.components
+            ]
+
+        if self.entry is not None:
+            data["entry"] = self.entry
+
+        return data

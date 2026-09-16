@@ -1,0 +1,235 @@
+{
+  "artifact_count": 41,
+  "artifacts": [
+    {
+      "bytes": 19098,
+      "path": "docs/v1_3_component_timing_interfaces.md",
+      "sha256": "4cef09ace549a8ff47fd500d2ba7dc5d72e33ac1f5e9def41147a21a13c8f96b"
+    },
+    {
+      "bytes": 1887,
+      "path": "examples/generated/v1_3_c3_components.futil",
+      "sha256": "8c8c7a3dbc1d240cce44350f0f7ec51362d511278b0ee3e172a7427558cd5e43"
+    },
+    {
+      "bytes": 1884,
+      "path": "examples/generated/v1_3_components.futil",
+      "sha256": "f9a690fdc40ad6eede370edf6b63724e10859c84ee7f1cdbbb561b83fc2fe9a8"
+    },
+    {
+      "bytes": 772,
+      "path": "examples/v1_3_components.lair",
+      "sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723"
+    },
+    {
+      "bytes": 20130,
+      "path": "lair/ast.py",
+      "sha256": "d7feb958e33f1202fe4f03d59ea8b4306dadf52342690db00917ab6448e1e4af"
+    },
+    {
+      "bytes": 16250,
+      "path": "lair/calyx_backend.py",
+      "sha256": "96480b0cf05b8c25d97b5586e5ef4fe16c58eda80dbbc202e37eaa24c29c9ce4"
+    },
+    {
+      "bytes": 4809,
+      "path": "lair/compiler.py",
+      "sha256": "3773e452b50697cdb267407daf818f6e635dfae507d7987f179c008af8af7983"
+    },
+    {
+      "bytes": 3259,
+      "path": "lair/component_graph.py",
+      "sha256": "1da37fa89d6174b7d4faf8b031b0dfbfd997a3a25daa45fd9f1f9f69e1ce1ea4"
+    },
+    {
+      "bytes": 938,
+      "path": "lair/component_timing.py",
+      "sha256": "adb006ed39e2b20f7ff2447893b45efe8d0aaca866e9ae02e326b9736ea472ca"
+    },
+    {
+      "bytes": 10227,
+      "path": "lair/generator_elaboration.py",
+      "sha256": "9323198632e045de78e616aed2c6889dd3bce5bcd78a69eb981a6bc386097ae9"
+    },
+    {
+      "bytes": 15769,
+      "path": "lair/parser.py",
+      "sha256": "8fa2070fa7288e24edfeb3531dc84e1f62c92c3c34a983040d953d361f4de798"
+    },
+    {
+      "bytes": 23503,
+      "path": "lair/resolver.py",
+      "sha256": "3615f7c8a7caacf8628205fc9342b07dc9221dab2cfea692ed92be22ce910538"
+    },
+    {
+      "bytes": 8291,
+      "path": "results/v1_3_c1_fud2_raw.txt",
+      "sha256": "ad6ba8395fe232236c5ad829ec39f3106da0c082718266256701b340250e073b"
+    },
+    {
+      "bytes": 444,
+      "path": "results/v1_3_c1_rtl_latency_validation.json",
+      "sha256": "0ba24bb205fccac36f4d2562f78f0fafcc9d9f1d69c1a6c51a4671e692741beb"
+    },
+    {
+      "bytes": 601,
+      "path": "results/v1_3_c2_reversal.json",
+      "sha256": "fe1fc8a5d813f0675eb77b9320995a94eb6abfcde61a8064c740e46ba2863520"
+    },
+    {
+      "bytes": 447,
+      "path": "results/v1_3_c2_rtl_latency_validation.json",
+      "sha256": "4d1172e15003333ce38a3ad05da5e11eba67960535eea479a5b4ca17f9179aa6"
+    },
+    {
+      "bytes": 2083,
+      "path": "results/v1_3_c3_c5_experiments.json",
+      "sha256": "bb35ffd111fb49b62405ec189bd47d521d88aa9687ca6ea7b44faf433b379bb8"
+    },
+    {
+      "bytes": 8291,
+      "path": "results/v1_3_c3_fud2_raw.txt",
+      "sha256": "60ee0eb229e4aca19dbed6cf573967a27a1618af5c51c0c9234ac3fbd9acfb63"
+    },
+    {
+      "bytes": 447,
+      "path": "results/v1_3_c3_rtl_latency_validation.json",
+      "sha256": "edf5392aa5adf4c1360f586e73d8e1bde8d28f260102922217948e963b25dd2a"
+    },
+    {
+      "bytes": 447,
+      "path": "results/v1_3_c4_rtl_latency_validation.json",
+      "sha256": "ec8d0a64529482d570abfbd4949133fc841c77512d551804b9fb8fe56a82b2d0"
+    },
+    {
+      "bytes": 447,
+      "path": "results/v1_3_c5_rtl_latency_validation.json",
+      "sha256": "6a76e26006dd9a49bfc26200dcae8b8ece3b2f02df6f02c0facdd7c7e743781f"
+    },
+    {
+      "bytes": 429,
+      "path": "results/v1_3_canonical_hashes.json",
+      "sha256": "31af94d6ddbb0033c6b2889e61e0eb937b0d37d95f6b24db342ee417cbc9a384"
+    },
+    {
+      "bytes": 2863,
+      "path": "results/v1_3_canonical_ir.json",
+      "sha256": "54e0d4d7f185001f16e8da1663cc5cccc8e03d9c07d3cfadac42ff03fdef8d3f"
+    },
+    {
+      "bytes": 443,
+      "path": "results/v1_3_configuration_sweep.csv",
+      "sha256": "3763ac9123dadd576a6c427925591b3c41c9b966f362936f07eff22b89a9ae2f"
+    },
+    {
+      "bytes": 4972,
+      "path": "results/v1_3_configuration_sweep.json",
+      "sha256": "a8021ecb4040ca6b1b777abdaa4762db161a6328ed6dc30763d9cc690d0e4e09"
+    },
+    {
+      "bytes": 1520,
+      "path": "results/v1_3_configuration_sweep.md",
+      "sha256": "3ad22154ddef9f45890051af0197f45fd63e46ad4852837f5501bf15e1f3ab85"
+    },
+    {
+      "bytes": 3287,
+      "path": "results/v1_3_same_source_same_ir.json",
+      "sha256": "5d9c0a765838cbbd4ad06fd1252a27519146bd2a73a7fa21aabbc6bbaa98a027"
+    },
+    {
+      "bytes": 6228,
+      "path": "tests/check_v1_3_same_source_ir.py",
+      "sha256": "4786f2a22a3e5dedff13f3fa662c9f9ac7a10507cab3ac613d73e714e2bec33e"
+    },
+    {
+      "bytes": 18011,
+      "path": "tests/run_v1_3_configuration_sweep.py",
+      "sha256": "70df69fe56dcef6c3f9412a87bea6aad94347121a53a51eaa69f86ffb4eaf39c"
+    },
+    {
+      "bytes": 5973,
+      "path": "tests/test_v1_3_calyx_backend.py",
+      "sha256": "6bce3539ec44be41ca257ad6ae95199110254c5c629290e1f60907c8a1d05000"
+    },
+    {
+      "bytes": 3267,
+      "path": "tests/test_v1_3_canonical_source.py",
+      "sha256": "c4708dced4b7143d90ca3eccc9401843ca32fe96b472cf4869229996147e5a93"
+    },
+    {
+      "bytes": 5713,
+      "path": "tests/test_v1_3_compiler.py",
+      "sha256": "c02cfe9f3afbd8b182cce51eab8ae98d975435ec5310156984d225b5a62b9afd"
+    },
+    {
+      "bytes": 4831,
+      "path": "tests/test_v1_3_component_ast.py",
+      "sha256": "61de18a1fc4e71261858a48f6b8e73c05bb9b9ffd7fcf7e70d5e41339c12dd9f"
+    },
+    {
+      "bytes": 2867,
+      "path": "tests/test_v1_3_component_cycles.py",
+      "sha256": "023dc54e07f17767328e63075e394e675bf0e0b524b0d39c3ed9248788282f99"
+    },
+    {
+      "bytes": 4306,
+      "path": "tests/test_v1_3_component_graph.py",
+      "sha256": "77bd8f48abebcdf32d3603808fe59e56381553c612267ad1614545815cd57d4e"
+    },
+    {
+      "bytes": 3026,
+      "path": "tests/test_v1_3_component_resolution.py",
+      "sha256": "9ed45209dc26a293ff5ddb8f874681a2eca44346a1eb17e89be7e492bf1664ce"
+    },
+    {
+      "bytes": 1564,
+      "path": "tests/test_v1_3_component_timing.py",
+      "sha256": "285dd62e893ea16e4c24612bd2fb99fa1d0d08f227005f99f0250954540870dc"
+    },
+    {
+      "bytes": 5155,
+      "path": "tests/test_v1_3_component_validation.py",
+      "sha256": "399559d5883113886760d362dd3f0fb6549967423847bef95fc22afb8f38cb95"
+    },
+    {
+      "bytes": 4402,
+      "path": "tests/test_v1_3_parent_firewall.py",
+      "sha256": "bc52f6b29023c310ae135da5c848fbbe7843183865eb70321cc3a18ca3f23dc4"
+    },
+    {
+      "bytes": 5093,
+      "path": "tests/test_v1_3_parser.py",
+      "sha256": "ee36663b2dda25fdac0992c2e722a1d58d0b87a2593ae3693ba358fb4eb1d77d"
+    },
+    {
+      "bytes": 4242,
+      "path": "tests/test_v1_3_strong_boundary.py",
+      "sha256": "e521d967c7b83054623ae7a55df8e9e33773f08bcc294dced7c6828ef8dac5e4"
+    }
+  ],
+  "canonical": {
+    "explicit_timing_bindings": 0,
+    "source": "examples/v1_3_components.lair",
+    "source_sha256": "704d1d2795fdf5e4bd25add540b4d5f42d0a5ca5eb9fab91fb9dbdc31df6e723",
+    "symbolic_ir_sha256": "ec073bfe3e1612fdddae4fcc02892227648ace6fa7424dbe48f0cb891d53c942"
+  },
+  "configuration_count": 5,
+  "experiment": "V1.3 reusable component timing interfaces",
+  "invariance": {
+    "all_source_hashes_identical": true,
+    "all_symbolic_ir_hashes_identical": true,
+    "matches_frozen_manifest": true
+  },
+  "schema_version": 1,
+  "validation_summary": {
+    "acceptance_matches": true,
+    "accepted_cycles_match": true,
+    "accepted_memory_correct": true,
+    "all_rtl_functional_correct": true,
+    "all_rtl_timing_correct": true,
+    "matches_frozen_manifest": true,
+    "rejected_emit_no_calyx": true,
+    "same_source": true,
+    "same_symbolic_ir": true
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "contract_latencies": {
+    "L_A": 2,
+    "L_B": 5
+  },
+  "measured_go_to_done_cycles": {
+    "kernel_a": 2,
+    "kernel_b": 5
+  },
+  "outputs_for_x_10": {
+    "kernel_a": 11,
+    "kernel_b": 12
+  },
+  "timing_correct": true,
+  "functional_correct": true,
+  "rtl_sha256": "79599a00b41f3fa00f494268cc15f06635e8753275e16aab692b73fbc0b31776"
+}

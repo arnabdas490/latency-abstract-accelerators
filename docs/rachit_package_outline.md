@@ -1,6 +1,6 @@
 # Rachit Nigam Outreach Package — Working Outline
 
-Status: internal working document  
+Status: internal working document
 Target outreach date: 2026-09-22
 
 ## Goal

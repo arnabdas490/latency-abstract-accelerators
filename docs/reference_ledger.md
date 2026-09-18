@@ -1,6 +1,6 @@
 # Reference and Claim Ledger
 
-Status: working research record  
+Status: working research record
 Updated: 2026-09-18
 
 Purpose: map every important project claim to primary literature or current

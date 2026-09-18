@@ -1,7 +1,7 @@
 # Research Audit: Latency Abstraction at the Mixed-Control Boundary
 
-Status: working research audit, not a novelty claim  
-Updated: 2026-09-18  
+Status: working research audit, not a novelty claim
+Updated: 2026-09-18
 Frozen implementation baseline: `v1.3-freeze`
 
 ## 1. Research question
